@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ---- build: install all dependencies and compile ----
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
@@ -11,7 +11,7 @@ COPY src ./src
 RUN pnpm build && pnpm prune --prod
 
 # ---- runtime: production dependencies only, non-root, no build tools ----
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /app/package.json ./
