@@ -20,7 +20,7 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
       provide: MAILER,
       inject: [ENV],
       useFactory: (env: Env) =>
-        env.EMAILER_MODE === "smtp"
+        env.MAIL_PROVIDER === "smtp"
           ? new SmtpMailer({
               host: env.SMTP_HOST!,
               port: env.SMTP_PORT,
@@ -29,7 +29,7 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
               password: env.SMTP_PASSWORD!,
               from: env.SMTP_FROM!,
             })
-          : env.EMAILER_MODE === "resend"
+          : env.MAIL_PROVIDER === "resend"
             ? new ResendMailer({
                 apiKey: env.RESEND_API_KEY!,
                 from: env.RESEND_FROM!,
