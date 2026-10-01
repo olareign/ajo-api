@@ -12,7 +12,7 @@ function escapeHtml(value: string): string {
 function layout(paragraphs: string[], button?: { label: string; href: string }): string {
   const body = paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
   const action = button
-    ? `<p><a href="${escapeHtml(button.href)}" style="background:#038641;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(button.label)}</a></p>`
+    ? `<p><a href="${escapeHtml(button.href)}" style="background:#222f78;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(button.label)}</a></p>`
     : "";
   return `<div style="font-family:sans-serif;max-width:480px">${body}${action}</div>`;
 }
@@ -37,6 +37,36 @@ export function accountExistsEmail(input: { to: string; signInLink: string }): E
   ];
   return {
     subject: "Someone tried to create an Àjọ account with your email",
+    text: `${lines.join("\n\n")}\n\n${input.signInLink}\n`,
+    html: layout(lines, { label: "Sign in", href: input.signInLink }),
+  };
+}
+
+export function passwordResetEmail(input: { to: string; name: string; link: string }): Email {
+  const lines = [
+    `Hi ${input.name},`,
+    "Use this link to choose a new password for your Àjọ account. It expires in 1 hour and can be used once.",
+    "If you didn't ask to reset your password, you can ignore this email. Your password has not been changed.",
+  ];
+  return {
+    subject: "Reset your Àjọ password",
+    text: `${lines.join("\n\n")}\n\n${input.link}\n`,
+    html: layout(lines, { label: "Choose a new password", href: input.link }),
+  };
+}
+
+export function passwordChangedEmail(input: {
+  to: string;
+  name: string;
+  signInLink: string;
+}): Email {
+  const lines = [
+    `Hi ${input.name},`,
+    "The password on your Àjọ account was just changed, and you were signed out everywhere.",
+    "If this wasn't you, reset your password again straight away and contact us.",
+  ];
+  return {
+    subject: "Your Àjọ password was changed",
     text: `${lines.join("\n\n")}\n\n${input.signInLink}\n`,
     html: layout(lines, { label: "Sign in", href: input.signInLink }),
   };
