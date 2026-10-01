@@ -1,0 +1,10 @@
+# Every change needs review from the owner. Security-sensitive paths are listed
+# explicitly so they keep an owner if the default changes.
+*                       @olareign
+/.github/               @olareign
+/src/app/               @olareign
+/src/config/            @olareign
+/src/security/          @olareign
+/src/database/          @olareign
+/Dockerfile             @olareign
+/render.yaml            @olareign
