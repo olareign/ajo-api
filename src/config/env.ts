@@ -40,9 +40,15 @@ const schema = z
     API_DOCS_ENABLED: flag.default(false),
     /** Base URL of the web app; links in emails (verification, reset) point here. */
     WEB_APP_URL: urlWithScheme(["https", "http"]).optional(),
-    MAIL_PROVIDER: z.enum(["fake", "resend"]).default("fake"),
-    RESEND_API_KEY: z.string().min(1).optional(),
-    MAIL_FROM: z.string().min(3).optional(),
+    MAIL_PROVIDER: z.enum(["fake", "smtp"]).default("fake"),
+    SMTP_HOST: z.string().min(1).optional(),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
+    SMTP_SECURE: flag.optional(),
+    SMTP_USER: z.string().min(1).optional(),
+    SMTP_PASSWORD: z.string().min(1).optional(),
+    /** Sender shown on every email, e.g. `Àjo <noreply@example.com>`. */
+    SMTP_FROM: z.string().min(3).optional(),
+    SUPPORT_EMAIL: z.string().email().optional(),
     BREACHED_PASSWORD_CHECK: z.enum(["fake", "hibp"]).default("fake"),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
@@ -85,9 +91,10 @@ const schema = z
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }
     }
-    if (env.MAIL_PROVIDER === "resend") {
-      if (!env.RESEND_API_KEY) require("RESEND_API_KEY", "required when MAIL_PROVIDER=resend");
-      if (!env.MAIL_FROM) require("MAIL_FROM", "required when MAIL_PROVIDER=resend");
+    if (env.MAIL_PROVIDER === "smtp") {
+      for (const key of ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"] as const) {
+        if (!env[key]) require(key, "required when MAIL_PROVIDER=smtp");
+      }
     }
   });
 
