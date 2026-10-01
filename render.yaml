@@ -31,15 +31,27 @@ services:
       - key: WEB_APP_URL
         sync: false
       - key: MAIL_PROVIDER
-        value: resend
-      - key: RESEND_API_KEY
+        value: smtp
+      - key: SMTP_HOST
         sync: false
-      - key: MAIL_FROM
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SUPPORT_EMAIL
         sync: false
       - key: BREACHED_PASSWORD_CHECK
         value: hibp
       # Signs access tokens; only the API needs it.
       - key: JWT_SECRET
+        generateValue: true
+      # Encrypts authenticator secrets and other sensitive columns (32 random bytes, base64).
+      # Losing or changing it makes those values unreadable, so never regenerate it casually.
+      - key: FIELD_ENCRYPTION_KEY
         generateValue: true
 
   - type: worker
@@ -65,10 +77,18 @@ services:
       - key: WEB_APP_URL
         sync: false
       - key: MAIL_PROVIDER
-        value: resend
-      - key: RESEND_API_KEY
+        value: smtp
+      - key: SMTP_HOST
         sync: false
-      - key: MAIL_FROM
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SUPPORT_EMAIL
         sync: false
       - key: BREACHED_PASSWORD_CHECK
         value: hibp

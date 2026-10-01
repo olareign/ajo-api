@@ -12,9 +12,11 @@ import { AdaptersModule } from "./adapters/adapters.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./identity/identity.module.js";
+import { LedgerModule } from "./ledger/ledger.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
 import { RedisThrottlerStorage } from "./security/redis-throttler.storage.js";
+import { WalletModule } from "./wallet/wallet.module.js";
 import { ThrottlerStorageModule } from "./security/throttler-storage.module.js";
 
 /** Default limit for every route; sensitive endpoints (login, OTP, PIN) set stricter ones. */
@@ -46,6 +48,8 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     HealthModule,
     IdentityModule,
     AuthModule,
+    LedgerModule,
+    WalletModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
