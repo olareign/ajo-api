@@ -10,6 +10,7 @@ const valid: Record<string, string | undefined> = {
   RESEND_API_KEY: "re_live_secret",
   MAIL_FROM: "Àjọ <no-reply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
+  JWT_SECRET: "j".repeat(48),
 };
 
 describe("loadEnv", () => {
@@ -123,5 +124,19 @@ describe("adapter configuration", () => {
     } catch (error) {
       expect(String(error)).not.toContain("re_live_secret");
     }
+  });
+});
+
+describe("JWT_SECRET", () => {
+  it("is required in production and must be at least 32 characters", () => {
+    expect(() => loadEnv({ ...valid, JWT_SECRET: undefined })).toThrow(/JWT_SECRET/);
+    expect(() => loadEnv({ ...valid, JWT_SECRET: "short" })).toThrow(/JWT_SECRET/);
+    expect(loadEnv({ ...valid, JWT_SECRET: "k".repeat(32) }).JWT_SECRET).toBe("k".repeat(32));
+  });
+
+  it("gets a random per-process value in development and tests", () => {
+    const base = { DATABASE_URL: "postgres://a:b@localhost/ajo", REDIS_URL: "redis://localhost" };
+    const a = loadEnv(base).JWT_SECRET;
+    expect(a.length).toBeGreaterThanOrEqual(32);
   });
 });

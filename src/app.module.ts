@@ -9,6 +9,7 @@ import type { Env } from "./config/env.js";
 import { ENV, EnvModule } from "./config/env.module.js";
 import { buildDataSourceOptions } from "./database/database-options.js";
 import { AdaptersModule } from "./adapters/adapters.module.js";
+import { AuthModule } from "./auth/auth.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./identity/identity.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
@@ -44,6 +45,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     AdaptersModule,
     HealthModule,
     IdentityModule,
+    AuthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

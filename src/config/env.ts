@@ -1,4 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
+
+/** One random signing key per process for development and tests (sessions reset on restart). */
+const DEV_JWT_SECRET = randomBytes(48).toString("base64url");
 
 const flag = z.enum(["true", "false"]).transform((value) => value === "true");
 
@@ -32,11 +36,14 @@ const schema = z
     RESEND_API_KEY: z.string().min(1).optional(),
     MAIL_FROM: z.string().min(3).optional(),
     BREACHED_PASSWORD_CHECK: z.enum(["fake", "hibp"]).default("fake"),
+    /** HMAC key for access tokens; at least 32 characters, required in production. */
+    JWT_SECRET: z.string().min(32).optional(),
   })
   .transform((env) => ({
     ...env,
     DATABASE_SSL: env.DATABASE_SSL ?? env.NODE_ENV === "production",
     WEB_APP_URL: env.WEB_APP_URL ?? (env.NODE_ENV === "production" ? "" : "http://localhost:3000"),
+    JWT_SECRET: env.JWT_SECRET ?? (env.NODE_ENV === "production" ? "" : DEV_JWT_SECRET),
   }))
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && env.API_DOCS_ENABLED) {
@@ -55,6 +62,7 @@ const schema = z
       // Stand-in adapters exist for development and tests only.
       if (env.MAIL_PROVIDER === "fake")
         require("MAIL_PROVIDER", "stand-in not allowed in production");
+      if (!env.JWT_SECRET) require("JWT_SECRET", "required in production");
       if (env.BREACHED_PASSWORD_CHECK === "fake") {
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }

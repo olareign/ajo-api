@@ -43,6 +43,7 @@
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
+    "jose": "^6.2.12",
     "nestjs-pino": "^5.2.1",
     "otpauth": "^9.5.2",
     "pg": "^8.23.1",

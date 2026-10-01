@@ -1,32 +1,21 @@
-import { randomUUID } from "node:crypto";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { DataSource } from "typeorm";
 import { MAILER } from "../../src/adapters/mail/mailer.port.js";
 import type { FakeMailer } from "../../src/adapters/mail/fake.adapter.js";
 import { createTestApp } from "../support/test-app.js";
+import { GOOD_PASSWORD, newIp, tokenFrom, uniqueEmail } from "../support/users.js";
 
 let app: NestExpressApplication;
 let db: DataSource;
 let mailer: FakeMailer;
-let ipCounter = 0;
-
-/** A fresh client IP per call keeps per-IP rate limits from leaking between tests. */
-const newIp = () => `10.0.${Math.floor(++ipCounter / 250)}.${ipCounter % 250}`;
-const uniqueEmail = () => `user-${randomUUID().slice(0, 8)}@example.com`;
-const goodPassword = "correct horse battery staple";
+const goodPassword = GOOD_PASSWORD;
 
 function signUp(body: Record<string, unknown>, ip = newIp()) {
   return request(app.getHttpServer())
     .post("/api/v1/auth/sign-up")
     .set("X-Forwarded-For", ip)
     .send(body);
-}
-
-function tokenFrom(text: string): string {
-  const match = /token=([A-Za-z0-9_-]+)/.exec(text);
-  if (!match) throw new Error("no token in email");
-  return match[1]!;
 }
 
 beforeAll(async () => {

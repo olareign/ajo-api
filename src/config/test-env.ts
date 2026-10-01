@@ -8,4 +8,5 @@ export const PRODUCTION_TEST_ENV: Record<string, string> = {
   RESEND_API_KEY: "re_test_not_a_real_key",
   MAIL_FROM: "Àjọ <no-reply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
+  JWT_SECRET: "test-only-signing-key-not-used-anywhere-else",
 };

@@ -1,3 +1,4 @@
+import { Public } from "../auth/public.decorator.js";
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiAcceptedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
@@ -8,6 +9,7 @@ const HOUR = 60 * 60 * 1000;
 
 @ApiTags("auth")
 @Controller("auth")
+@Public()
 export class SignUpController {
   constructor(private readonly signUps: SignUpService) {}
 

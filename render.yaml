@@ -39,6 +39,9 @@ services:
         sync: false
       - key: BREACHED_PASSWORD_CHECK
         value: hibp
+      # Signs access tokens; only the API needs it.
+      - key: JWT_SECRET
+        generateValue: true
 
   - type: worker
     name: ajo-worker
