@@ -6,9 +6,11 @@ const valid: Record<string, string | undefined> = {
   DATABASE_URL: "postgres://ajo:s3cret-pass@db.internal:5432/ajo",
   REDIS_URL: "rediss://default:redis-pass@cache.internal:6379",
   WEB_APP_URL: "https://app.ajo.example",
-  MAIL_PROVIDER: "resend",
-  RESEND_API_KEY: "re_live_secret",
-  MAIL_FROM: "Àjọ <no-reply@ajo.example>",
+  MAIL_PROVIDER: "smtp",
+  SMTP_HOST: "smtp.ajo.example",
+  SMTP_USER: "mailer",
+  SMTP_PASSWORD: "live-secret",
+  SMTP_FROM: "Àjo <noreply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
   JWT_SECRET: "j".repeat(48),
   FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
@@ -75,15 +77,17 @@ describe("adapter configuration", () => {
   const prod = {
     ...valid,
     WEB_APP_URL: "https://app.ajo.example",
-    MAIL_PROVIDER: "resend",
-    RESEND_API_KEY: "re_live_secret",
-    MAIL_FROM: "Àjọ <no-reply@ajo.example>",
+    MAIL_PROVIDER: "smtp",
+    SMTP_HOST: "smtp.ajo.example",
+    SMTP_USER: "mailer",
+    SMTP_PASSWORD: "live-secret",
+    SMTP_FROM: "Àjo <noreply@ajo.example>",
     BREACHED_PASSWORD_CHECK: "hibp",
   };
 
   it("accepts real providers in production", () => {
     expect(loadEnv(prod)).toMatchObject({
-      MAIL_PROVIDER: "resend",
+      MAIL_PROVIDER: "smtp",
       BREACHED_PASSWORD_CHECK: "hibp",
     });
   });
@@ -107,9 +111,10 @@ describe("adapter configuration", () => {
     );
   });
 
-  it("needs Resend credentials and a sender when Resend is used", () => {
-    expect(() => loadEnv({ ...prod, RESEND_API_KEY: undefined })).toThrow(/RESEND_API_KEY/);
-    expect(() => loadEnv({ ...prod, MAIL_FROM: undefined })).toThrow(/MAIL_FROM/);
+  it("needs SMTP credentials and a sender when SMTP is used", () => {
+    expect(() => loadEnv({ ...prod, SMTP_HOST: undefined })).toThrow(/SMTP_HOST/);
+    expect(() => loadEnv({ ...prod, SMTP_PASSWORD: undefined })).toThrow(/SMTP_PASSWORD/);
+    expect(() => loadEnv({ ...prod, SMTP_FROM: undefined })).toThrow(/SMTP_FROM/);
   });
 
   it("requires an HTTPS web app URL in production, since links in emails point there", () => {
@@ -119,11 +124,11 @@ describe("adapter configuration", () => {
     expect(() => loadEnv({ ...prod, WEB_APP_URL: undefined })).toThrow(/WEB_APP_URL/);
   });
 
-  it("never echoes the Resend key in errors", () => {
+  it("never echoes the SMTP password in errors", () => {
     try {
-      loadEnv({ ...prod, MAIL_FROM: undefined });
+      loadEnv({ ...prod, SMTP_FROM: undefined });
     } catch (error) {
-      expect(String(error)).not.toContain("re_live_secret");
+      expect(String(error)).not.toContain("live-secret");
     }
   });
 });
