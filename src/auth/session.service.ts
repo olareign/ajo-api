@@ -4,6 +4,7 @@ import { sql } from "../database/sql.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { AccessTokens } from "./access-tokens.js";
+import { MfaService, type CodeInput } from "./mfa.service.js";
 
 export const MAX_FAILED_LOGINS = 10;
 export const LOCKOUT_MINUTES = 15;
@@ -21,6 +22,9 @@ export type TokenPair = Readonly<{
 
 export type ClientContext = Readonly<{ ip?: string; userAgent?: string }>;
 
+/** A password alone is enough, or the person must finish with a second step. */
+export type LoginResult = TokenPair | Readonly<{ mfaRequired: true; mfaToken: string }>;
+
 type UserRow = {
   id: string;
   password_hash: string;
@@ -36,9 +40,10 @@ export class SessionService {
     private readonly db: DataSource,
     private readonly hasher: PasswordHasher,
     @Inject(AccessTokens) private readonly accessTokens: AccessTokens,
+    private readonly mfa: MfaService,
   ) {}
 
-  async login(email: string, password: string, client: ClientContext): Promise<TokenPair> {
+  async login(email: string, password: string, client: ClientContext): Promise<LoginResult> {
     // Committed outcome first, then any error, so failure counters are never rolled back.
     const outcome = await this.db.transaction(async (tx) => {
       // Row lock serialises concurrent guesses against one account.
@@ -71,22 +76,30 @@ export class SessionService {
       ]);
       if (!user.email_verified_at) return { kind: "unverified" } as const;
 
-      const [session] = await sql<{ id: string }>(
-        tx,
-        `INSERT INTO sessions (user_id, expires_at, ip, user_agent)
-         VALUES ($1, now() + make_interval(days => $2), $3, left($4, 512))
-         RETURNING id`,
-        [user.id, SESSION_MAX_DAYS, client.ip ?? null, client.userAgent ?? null],
-      );
-      const refreshToken = await this.issueRefreshToken(tx, session!.id);
-      return { kind: "ok", userId: user.id, sessionId: session!.id, refreshToken } as const;
+      if (await this.mfa.isEnabled(tx, user.id)) {
+        return { kind: "mfa", token: await this.mfa.createChallenge(tx, user.id) } as const;
+      }
+      const { sessionId, refreshToken } = await this.createSession(tx, user.id, client);
+      return { kind: "ok", userId: user.id, sessionId, refreshToken } as const;
     });
 
     if (outcome.kind === "bad_credentials") throw new UnauthorizedException(BAD_CREDENTIALS);
     if (outcome.kind === "unverified") {
       throw new ForbiddenException("Verify your email before signing in.");
     }
+    if (outcome.kind === "mfa") return { mfaRequired: true, mfaToken: outcome.token };
     return this.tokenPair(outcome.userId, outcome.sessionId, outcome.refreshToken);
+  }
+
+  /** Second step of a sign-in: a correct code (or recovery code) turns the challenge into a session. */
+  async loginWithMfa(
+    mfaToken: string,
+    input: CodeInput,
+    client: ClientContext,
+  ): Promise<TokenPair> {
+    const userId = await this.mfa.completeChallenge(mfaToken, input);
+    const created = await this.db.transaction((tx) => this.createSession(tx, userId, client));
+    return this.tokenPair(userId, created.sessionId, created.refreshToken);
   }
 
   /**
@@ -161,6 +174,21 @@ export class SessionService {
         WHERE user_id = $1 AND revoked_at IS NULL`,
       [userId],
     );
+  }
+
+  private async createSession(
+    tx: Parameters<typeof sql>[0],
+    userId: string,
+    client: ClientContext,
+  ): Promise<{ sessionId: string; refreshToken: string }> {
+    const [session] = await sql<{ id: string }>(
+      tx,
+      `INSERT INTO sessions (user_id, expires_at, ip, user_agent)
+       VALUES ($1, now() + make_interval(days => $2), $3, left($4, 512))
+       RETURNING id`,
+      [userId, SESSION_MAX_DAYS, client.ip ?? null, client.userAgent ?? null],
+    );
+    return { sessionId: session!.id, refreshToken: await this.issueRefreshToken(tx, session!.id) };
   }
 
   private async issueRefreshToken(
