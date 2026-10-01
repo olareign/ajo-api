@@ -38,9 +38,9 @@ export class SmtpMailer implements Mailer {
         requireTLS: true,
         tls: settings.tls ? { ca: settings.tls.ca } : undefined,
         auth: { user: settings.user, pass: settings.password },
-        connectionTimeout: 10_000,
-        greetingTimeout: 10_000,
-        socketTimeout: 20_000,
+        connectionTimeout: 30_000,
+        greetingTimeout: 15_000,
+        socketTimeout: 30_000,
       });
   }
 

@@ -6,6 +6,7 @@ import { FakeBreachedPasswords } from "./breached-passwords/fake.adapter.js";
 import { HibpBreachedPasswords } from "./breached-passwords/hibp.adapter.js";
 import { FakeMailer } from "./mail/fake.adapter.js";
 import { MAILER } from "./mail/mailer.port.js";
+import { ResendMailer } from "./mail/resend.adapter.js";
 import { SmtpMailer } from "./mail/smtp.adapter.js";
 
 /**
@@ -19,7 +20,7 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
       provide: MAILER,
       inject: [ENV],
       useFactory: (env: Env) =>
-        env.MAIL_PROVIDER === "smtp"
+        env.EMAILER_MODE === "smtp"
           ? new SmtpMailer({
               host: env.SMTP_HOST!,
               port: env.SMTP_PORT,
@@ -28,7 +29,12 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
               password: env.SMTP_PASSWORD!,
               from: env.SMTP_FROM!,
             })
-          : new FakeMailer(),
+          : env.EMAILER_MODE === "resend"
+            ? new ResendMailer({
+                apiKey: env.RESEND_API_KEY!,
+                from: env.RESEND_FROM!,
+              })
+            : new FakeMailer(),
     },
     {
       provide: BREACHED_PASSWORDS,
