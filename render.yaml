@@ -31,16 +31,10 @@ services:
       - key: WEB_APP_URL
         sync: false
       - key: MAIL_PROVIDER
-        value: smtp
-      - key: SMTP_HOST
+        value: resend
+      - key: RESEND_API_KEY
         sync: false
-      - key: SMTP_PORT
-        value: "465"
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: SMTP_FROM
+      - key: RESEND_FROM
         sync: false
       - key: SUPPORT_EMAIL
         sync: false
@@ -77,16 +71,10 @@ services:
       - key: WEB_APP_URL
         sync: false
       - key: MAIL_PROVIDER
-        value: smtp
-      - key: SMTP_HOST
+        value: resend
+      - key: RESEND_API_KEY
         sync: false
-      - key: SMTP_PORT
-        value: "465"
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: SMTP_FROM
+      - key: RESEND_FROM
         sync: false
       - key: SUPPORT_EMAIL
         sync: false
