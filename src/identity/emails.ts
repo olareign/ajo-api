@@ -12,7 +12,7 @@ function escapeHtml(value: string): string {
 function layout(paragraphs: string[], button?: { label: string; href: string }): string {
   const body = paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
   const action = button
-    ? `<p><a href="${escapeHtml(button.href)}" style="background:#222f78;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(button.label)}</a></p>`
+    ? `<p><a href="${escapeHtml(button.href)}" style="background:#057a3f;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">${escapeHtml(button.label)}</a></p>`
     : "";
   return `<div style="font-family:sans-serif;max-width:480px">${body}${action}</div>`;
 }

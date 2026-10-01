@@ -11,6 +11,7 @@ const valid: Record<string, string | undefined> = {
   MAIL_FROM: "Àjọ <no-reply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
   JWT_SECRET: "j".repeat(48),
+  FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
 };
 
 describe("loadEnv", () => {
@@ -138,5 +139,48 @@ describe("JWT_SECRET", () => {
     const base = { DATABASE_URL: "postgres://a:b@localhost/ajo", REDIS_URL: "redis://localhost" };
     const a = loadEnv(base).JWT_SECRET;
     expect(a.length).toBeGreaterThanOrEqual(32);
+  });
+});
+
+describe("FIELD_ENCRYPTION_KEY", () => {
+  const dev = {
+    NODE_ENV: "development",
+    DATABASE_URL: valid.DATABASE_URL,
+    REDIS_URL: valid.REDIS_URL,
+  };
+
+  it("is required in production", () => {
+    expect(() => loadEnv({ ...valid, FIELD_ENCRYPTION_KEY: undefined })).toThrow(
+      /FIELD_ENCRYPTION_KEY/,
+    );
+  });
+
+  it("must be a base64 key of exactly 32 bytes", () => {
+    for (const bad of [
+      "short",
+      Buffer.alloc(16).toString("base64"),
+      Buffer.alloc(48).toString("base64"),
+    ]) {
+      expect(() => loadEnv({ ...valid, FIELD_ENCRYPTION_KEY: bad })).toThrow(
+        /FIELD_ENCRYPTION_KEY/,
+      );
+    }
+  });
+
+  it("never echoes the key in an error", () => {
+    const secret = "not-a-valid-key-but-very-secret-text";
+    try {
+      loadEnv({ ...valid, FIELD_ENCRYPTION_KEY: secret });
+    } catch (error) {
+      expect(String(error)).not.toContain(secret);
+    }
+  });
+
+  it("falls back to a fixed development key outside production, so local data stays readable across restarts", () => {
+    const a = loadEnv(dev).FIELD_ENCRYPTION_KEY;
+    const b = loadEnv(dev).FIELD_ENCRYPTION_KEY;
+    expect(a).toBe(b);
+    expect(Buffer.from(a, "base64")).toHaveLength(32);
+    expect(a).not.toBe(valid.FIELD_ENCRYPTION_KEY);
   });
 });

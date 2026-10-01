@@ -9,4 +9,5 @@ export const PRODUCTION_TEST_ENV: Record<string, string> = {
   MAIL_FROM: "Àjọ <no-reply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
   JWT_SECRET: "test-only-signing-key-not-used-anywhere-else",
+  FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64"),
 };

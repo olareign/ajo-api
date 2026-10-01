@@ -60,9 +60,9 @@ describe("identity emails", () => {
     expect(email.text).toMatch(/wasn't you/);
   });
 
-  it("styles buttons in the Àjọ indigo, not the old green", () => {
+  it("styles buttons in the Àjọ green", () => {
     const email = verificationEmail({ to: "a@b.c", name: "A", link: "https://app.ajo.example/x" });
-    expect(email.html).toContain("#222f78");
-    expect(email.html).not.toContain("#038641");
+    expect(email.html).toContain("#057a3f");
+    expect(email.html).not.toContain("#222f78");
   });
 });

@@ -1,8 +1,16 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 
 /** One random signing key per process for development and tests (sessions reset on restart). */
 const DEV_JWT_SECRET = randomBytes(48).toString("base64url");
+
+/**
+ * A fixed key for development and tests only, so data encrypted locally can be read after a
+ * restart. Production refuses to start without a real key.
+ */
+const DEV_FIELD_ENCRYPTION_KEY = createHash("sha256")
+  .update("ajo-development-only-field-encryption-key")
+  .digest("base64");
 
 const flag = z.enum(["true", "false"]).transform((value) => value === "true");
 
@@ -38,12 +46,21 @@ const schema = z
     BREACHED_PASSWORD_CHECK: z.enum(["fake", "hibp"]).default("fake"),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
+    /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
+    FIELD_ENCRYPTION_KEY: z
+      .string()
+      .refine((value) => Buffer.from(value, "base64").length === 32, {
+        message: "must be 32 bytes, base64-encoded",
+      })
+      .optional(),
   })
   .transform((env) => ({
     ...env,
     DATABASE_SSL: env.DATABASE_SSL ?? env.NODE_ENV === "production",
     WEB_APP_URL: env.WEB_APP_URL ?? (env.NODE_ENV === "production" ? "" : "http://localhost:3000"),
     JWT_SECRET: env.JWT_SECRET ?? (env.NODE_ENV === "production" ? "" : DEV_JWT_SECRET),
+    FIELD_ENCRYPTION_KEY:
+      env.FIELD_ENCRYPTION_KEY ?? (env.NODE_ENV === "production" ? "" : DEV_FIELD_ENCRYPTION_KEY),
   }))
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && env.API_DOCS_ENABLED) {
@@ -63,6 +80,7 @@ const schema = z
       if (env.MAIL_PROVIDER === "fake")
         require("MAIL_PROVIDER", "stand-in not allowed in production");
       if (!env.JWT_SECRET) require("JWT_SECRET", "required in production");
+      if (!env.FIELD_ENCRYPTION_KEY) require("FIELD_ENCRYPTION_KEY", "required in production");
       if (env.BREACHED_PASSWORD_CHECK === "fake") {
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }

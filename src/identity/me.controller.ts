@@ -9,6 +9,7 @@ export class ProfileResponse {
   @ApiProperty() email!: string;
   @ApiProperty() displayName!: string;
   @ApiProperty() emailVerified!: boolean;
+  @ApiProperty() mfaEnabled!: boolean;
 }
 
 @ApiTags("profile")
@@ -22,7 +23,9 @@ export class MeController {
   @ApiOkResponse({ type: ProfileResponse })
   async me(@CurrentUser() auth: AccessClaims): Promise<ProfileResponse> {
     const [user] = await this.db.query(
-      `SELECT id, email, display_name, email_verified_at IS NOT NULL AS verified FROM users WHERE id = $1`,
+      `SELECT id, email, display_name, email_verified_at IS NOT NULL AS verified,
+              EXISTS (SELECT 1 FROM user_mfa m WHERE m.user_id = users.id AND m.confirmed_at IS NOT NULL) AS mfa_enabled
+         FROM users WHERE id = $1`,
       [auth.userId],
     );
     if (!user) throw new NotFoundException();
@@ -31,6 +34,7 @@ export class MeController {
       email: user.email,
       displayName: user.display_name,
       emailVerified: user.verified,
+      mfaEnabled: user.mfa_enabled,
     };
   }
 }

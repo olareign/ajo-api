@@ -41,6 +41,10 @@ services:
       # Signs access tokens; only the API needs it.
       - key: JWT_SECRET
         generateValue: true
+      # Encrypts authenticator secrets and other sensitive columns (32 random bytes, base64).
+      # Losing or changing it makes those values unreadable, so never regenerate it casually.
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
 
   - type: worker
     name: ajo-worker
