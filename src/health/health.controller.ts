@@ -1,3 +1,4 @@
+import { Public } from "../auth/public.decorator.js";
 import { Controller, Get, Inject } from "@nestjs/common";
 import { HealthCheck, HealthCheckService, HealthIndicatorService } from "@nestjs/terminus";
 import { SkipThrottle } from "@nestjs/throttler";
@@ -13,6 +14,7 @@ export const PROBE_TIMEOUT_MS = 1500;
  */
 @SkipThrottle()
 @Controller("health")
+@Public()
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

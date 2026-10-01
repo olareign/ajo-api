@@ -1,4 +1,5 @@
 import { loadEnv } from "../config/env.js";
+import { PRODUCTION_TEST_ENV } from "../config/test-env.js";
 import { buildDataSourceOptions } from "./database-options.js";
 
 const base = {
@@ -9,7 +10,8 @@ const base = {
 describe("buildDataSourceOptions", () => {
   it("never lets TypeORM change the schema on its own; migrations only", () => {
     for (const NODE_ENV of ["development", "test", "production"]) {
-      const options = buildDataSourceOptions(loadEnv({ ...base, NODE_ENV }));
+      const source = NODE_ENV === "production" ? PRODUCTION_TEST_ENV : { ...base, NODE_ENV };
+      const options = buildDataSourceOptions(loadEnv(source));
       expect(options.synchronize).toBe(false);
       expect(options.migrationsRun).toBe(false);
       expect(options.dropSchema).toBe(false);
@@ -17,7 +19,7 @@ describe("buildDataSourceOptions", () => {
   });
 
   it("verifies the database's TLS certificate when TLS is on", () => {
-    const options = buildDataSourceOptions(loadEnv({ ...base, NODE_ENV: "production" }));
+    const options = buildDataSourceOptions(loadEnv(PRODUCTION_TEST_ENV));
     expect(options.ssl).toEqual({ rejectUnauthorized: true });
   });
 

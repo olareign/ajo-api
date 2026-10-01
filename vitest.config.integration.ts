@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     root: "./",
     include: ["test/**/*.int-spec.ts"],
+    globalSetup: ["./test/support/global-setup.ts"],
     testTimeout: 120_000,
     hookTimeout: 180_000,
     fileParallelism: false,

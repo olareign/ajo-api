@@ -1,13 +1,10 @@
 import { Writable } from "node:stream";
 import pino from "pino";
 import { loadEnv } from "../config/env.js";
+import { PRODUCTION_TEST_ENV } from "../config/test-env.js";
 import { buildLoggerOptions, REDACTED } from "./logger-options.js";
 
-const env = loadEnv({
-  NODE_ENV: "production",
-  DATABASE_URL: "postgres://a:b@db:5432/ajo",
-  REDIS_URL: "redis://cache:6379",
-});
+const env = loadEnv(PRODUCTION_TEST_ENV);
 
 function capture() {
   const lines: string[] = [];

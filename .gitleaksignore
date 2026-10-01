@@ -1,0 +1,2 @@
+# Fake weak passwords used by the development breached-password stand-in; not secrets.
+0989ddfe603a8d7038473cd93e91dcd9adfbcc16:src/adapters/breached-passwords/fake.adapter.ts:generic-api-key:5
