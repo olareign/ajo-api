@@ -1,10 +1,15 @@
 import { loadEnv } from "./env.js";
 
-const valid = {
+const valid: Record<string, string | undefined> = {
   NODE_ENV: "production",
   PORT: "8080",
   DATABASE_URL: "postgres://ajo:s3cret-pass@db.internal:5432/ajo",
   REDIS_URL: "rediss://default:redis-pass@cache.internal:6379",
+  WEB_APP_URL: "https://app.ajo.example",
+  MAIL_PROVIDER: "resend",
+  RESEND_API_KEY: "re_live_secret",
+  MAIL_FROM: "Àjọ <no-reply@ajo.example>",
+  BREACHED_PASSWORD_CHECK: "hibp",
 };
 
 describe("loadEnv", () => {
@@ -61,5 +66,62 @@ describe("loadEnv", () => {
 
   it("accepts only real booleans for flags", () => {
     expect(() => loadEnv({ ...valid, DATABASE_SSL: "yes" })).toThrow(/DATABASE_SSL/);
+  });
+});
+
+describe("adapter configuration", () => {
+  const prod = {
+    ...valid,
+    WEB_APP_URL: "https://app.ajo.example",
+    MAIL_PROVIDER: "resend",
+    RESEND_API_KEY: "re_live_secret",
+    MAIL_FROM: "Àjọ <no-reply@ajo.example>",
+    BREACHED_PASSWORD_CHECK: "hibp",
+  };
+
+  it("accepts real providers in production", () => {
+    expect(loadEnv(prod)).toMatchObject({
+      MAIL_PROVIDER: "resend",
+      BREACHED_PASSWORD_CHECK: "hibp",
+    });
+  });
+
+  it("uses stand-ins by default outside production", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://a:b@localhost/ajo",
+      REDIS_URL: "redis://localhost",
+    });
+    expect(env).toMatchObject({
+      MAIL_PROVIDER: "fake",
+      BREACHED_PASSWORD_CHECK: "fake",
+      WEB_APP_URL: "http://localhost:3000",
+    });
+  });
+
+  it("refuses stand-in adapters in production", () => {
+    expect(() => loadEnv({ ...prod, MAIL_PROVIDER: "fake" })).toThrow(/MAIL_PROVIDER/);
+    expect(() => loadEnv({ ...prod, BREACHED_PASSWORD_CHECK: "fake" })).toThrow(
+      /BREACHED_PASSWORD_CHECK/,
+    );
+  });
+
+  it("needs Resend credentials and a sender when Resend is used", () => {
+    expect(() => loadEnv({ ...prod, RESEND_API_KEY: undefined })).toThrow(/RESEND_API_KEY/);
+    expect(() => loadEnv({ ...prod, MAIL_FROM: undefined })).toThrow(/MAIL_FROM/);
+  });
+
+  it("requires an HTTPS web app URL in production, since links in emails point there", () => {
+    expect(() => loadEnv({ ...prod, WEB_APP_URL: "http://app.ajo.example" })).toThrow(
+      /WEB_APP_URL/,
+    );
+    expect(() => loadEnv({ ...prod, WEB_APP_URL: undefined })).toThrow(/WEB_APP_URL/);
+  });
+
+  it("never echoes the Resend key in errors", () => {
+    try {
+      loadEnv({ ...prod, MAIL_FROM: undefined });
+    } catch (error) {
+      expect(String(error)).not.toContain("re_live_secret");
+    }
   });
 });

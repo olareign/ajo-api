@@ -8,7 +8,9 @@ import { LoggerModule } from "nestjs-pino";
 import type { Env } from "./config/env.js";
 import { ENV, EnvModule } from "./config/env.module.js";
 import { buildDataSourceOptions } from "./database/database-options.js";
+import { AdaptersModule } from "./adapters/adapters.module.js";
 import { HealthModule } from "./health/health.module.js";
+import { IdentityModule } from "./identity/identity.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
 import { RedisThrottlerStorage } from "./security/redis-throttler.storage.js";
@@ -39,7 +41,9 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
         storage,
       }),
     }),
+    AdaptersModule,
     HealthModule,
+    IdentityModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

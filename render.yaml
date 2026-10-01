@@ -29,6 +29,16 @@ services:
           type: keyvalue
           name: ajo-redis
           property: connectionString
+      - key: WEB_APP_URL
+        sync: false
+      - key: MAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: BREACHED_PASSWORD_CHECK
+        value: hibp
 
   - type: worker
     name: ajo-worker
@@ -52,6 +62,16 @@ services:
           type: keyvalue
           name: ajo-redis
           property: connectionString
+      - key: WEB_APP_URL
+        sync: false
+      - key: MAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: BREACHED_PASSWORD_CHECK
+        value: hibp
 
   - type: keyvalue
     name: ajo-redis

@@ -1,7 +1,5 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
-import { PostgreSqlContainer, type StartedPostgreSqlContainer } from "@testcontainers/postgresql";
-import { RedisContainer, type StartedRedisContainer } from "@testcontainers/redis";
 import { Redis } from "ioredis";
 import request from "supertest";
 import { AppModule } from "../src/app.module.js";
@@ -11,33 +9,17 @@ import { ENV } from "../src/config/env.module.js";
 import { createDataSource } from "../src/database/data-source.js";
 import { RedisThrottlerStorage } from "../src/security/redis-throttler.storage.js";
 
-let postgres: StartedPostgreSqlContainer;
-let redis: StartedRedisContainer;
-let env: Record<string, string>;
+import { testEnv } from "./support/test-app.js";
 
-beforeAll(async () => {
-  [postgres, redis] = await Promise.all([
-    new PostgreSqlContainer("postgis/postgis:17-3.5-alpine").start(),
-    new RedisContainer("redis:7.4-alpine").start(),
-  ]);
-  env = {
-    NODE_ENV: "test",
-    LOG_LEVEL: "error",
-    DATABASE_URL: postgres.getConnectionUri(),
-    REDIS_URL: redis.getConnectionUrl(),
-  };
-});
-
-afterAll(async () => {
-  await Promise.all([postgres?.stop(), redis?.stop()]);
-});
+const env = testEnv();
 
 describe("migrations", () => {
   it("apply cleanly, are idempotent, and can be reverted", async () => {
     const dataSource = await createDataSource(env).initialize();
     try {
-      const applied = await dataSource.runMigrations({ transaction: "each" });
-      expect(applied.map((m) => m.name)).toContain("EnableExtensions1790900000000");
+      // Another test file may have migrated the shared database already.
+      await dataSource.runMigrations({ transaction: "each" });
+      expect(await dataSource.showMigrations()).toBe(false);
 
       const extensions: { extname: string }[] = await dataSource.query(
         "SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto', 'citext') ORDER BY extname",
