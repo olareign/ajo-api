@@ -1,0 +1,8 @@
+name: ajo-api CodeQL config
+queries:
+  - uses: security-extended
+paths-ignore:
+  # Have I Been Pwned's range API is defined over the SHA-1 of the password, so this adapter
+  # must use SHA-1. It is a lookup key sent as a 5-character prefix, never stored or used to
+  # protect a credential (passwords are hashed with argon2id in src/identity/password-hasher.ts).
+  - src/adapters/breached-passwords/hibp.adapter.ts

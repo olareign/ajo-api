@@ -3,7 +3,8 @@
 # ---- build: install all dependencies and compile ----
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable
+# corepack is no longer bundled with the Node images; pin pnpm to the version in package.json.
+RUN npm install --global pnpm@10.28.0
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
