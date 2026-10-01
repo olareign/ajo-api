@@ -1,5 +1,5 @@
 # Render Blueprint. Secrets are set in the Render dashboard (sync: false), never here.
-# Services talk over Render's private network; nothing but the API is public.
+# The database is Neon (Frankfurt, Postgres 17), not Render Postgres. Redis stays on Render's private network.
 services:
   - type: web
     name: ajo-api
@@ -17,13 +17,12 @@ services:
         value: "3000"
       - key: TRUST_PROXY_HOPS
         value: "1"
+      # The Neon direct (non-pooled) connection string, set in the dashboard.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ajo-db
-          property: connectionString
-      # Internal connections stay on Render's private network.
+        sync: false
+      # Neon requires TLS.
       - key: DATABASE_SSL
-        value: "false"
+        value: "true"
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -55,11 +54,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: ajo-db
-          property: connectionString
+        sync: false
       - key: DATABASE_SSL
-        value: "false"
+        value: "true"
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -82,12 +79,4 @@ services:
     region: frankfurt
     # Queues must never lose jobs to eviction.
     maxmemoryPolicy: noeviction
-    ipAllowList: []
-
-databases:
-  - name: ajo-db
-    plan: basic-1gb
-    region: frankfurt
-    databaseName: ajo
-    postgresMajorVersion: "17"
     ipAllowList: []
