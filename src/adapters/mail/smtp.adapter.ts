@@ -9,6 +9,8 @@ export type SmtpSettings = Readonly<{
   user: string;
   password: string;
   from: string;
+  /** Extra TLS options, for a private certificate authority in tests. */
+  tls?: Readonly<{ ca?: string }>;
 }>;
 
 /** The part of a nodemailer transport the mailer uses; tests pass a stand-in. */
@@ -34,6 +36,7 @@ export class SmtpMailer implements Mailer {
         port: settings.port,
         secure: resolveSecure(settings.port, settings.secure),
         requireTLS: true,
+        tls: settings.tls ? { ca: settings.tls.ca } : undefined,
         auth: { user: settings.user, pass: settings.password },
         connectionTimeout: 10_000,
         greetingTimeout: 10_000,
@@ -52,9 +55,16 @@ export class SmtpMailer implements Mailer {
         // SMTP has no idempotency key; a stable Message-ID lets receivers drop duplicates.
         messageId: `<${message.idempotencyKey.replace(/[^\w.-]/g, "-")}@ajo.mail>`,
       });
-    } catch {
-      // Never surface the transport error: it can echo the server's reply or credentials.
-      throw new Error("Email provider rejected the message (SMTP)");
+    } catch (error) {
+      // Only the error's short code reaches the logs: the full text can echo the server's reply.
+      const code = (error as { code?: unknown }).code;
+      const responseCode = (error as { responseCode?: unknown }).responseCode;
+      const detail = [code, responseCode].filter(
+        (x) => typeof x === "string" || typeof x === "number",
+      );
+      throw new Error(
+        `Email provider rejected the message (SMTP${detail.length ? ` ${detail.join(" ")}` : ""})`,
+      );
     }
   }
 }
