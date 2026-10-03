@@ -275,6 +275,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The bot check failed (`code: \"bot_check_failed\"`: the token is wrong, used or expired), or a field is invalid. Nothing is created."
+          },
+          "503": {
+            "description": "The bot check could not run (`code: \"bot_check_unavailable\"`). The person should try again; nothing is created."
           }
         },
         "tags": [
@@ -857,6 +863,11 @@
           "displayName": {
             "type": "string",
             "example": "Ada"
+          },
+          "botToken": {
+            "type": "string",
+            "maxLength": 2048,
+            "description": "Cloudflare Turnstile token from the sign-up form. Required when bot protection is on; single-use."
           }
         },
         "required": [

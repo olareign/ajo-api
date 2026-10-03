@@ -52,6 +52,9 @@ const schema = z
     RESEND_FROM: z.string().min(3).optional(),
     SUPPORT_EMAIL: z.string().email().optional(),
     BREACHED_PASSWORD_CHECK: z.enum(["fake", "hibp"]).default("fake"),
+    /** Bot protection on sign-up. `turnstile` is Cloudflare Turnstile and needs its secret key. */
+    BOT_CHECK: z.enum(["fake", "turnstile"]).default("fake"),
+    TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -92,6 +95,10 @@ const schema = z
       if (env.BREACHED_PASSWORD_CHECK === "fake") {
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }
+      if (env.BOT_CHECK === "fake") require("BOT_CHECK", "stand-in not allowed in production");
+    }
+    if (env.BOT_CHECK === "turnstile" && !env.TURNSTILE_SECRET_KEY) {
+      require("TURNSTILE_SECRET_KEY", "required when BOT_CHECK=turnstile");
     }
     if (env.MAIL_PROVIDER === "smtp") {
       for (const key of ["SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"] as const) {

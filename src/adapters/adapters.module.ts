@@ -2,6 +2,9 @@ import { Global, Module } from "@nestjs/common";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
 import { BREACHED_PASSWORDS } from "./breached-passwords/breached-passwords.port.js";
+import { BOT_CHECK } from "./bot-check/bot-check.port.js";
+import { FakeBotCheck } from "./bot-check/fake.adapter.js";
+import { TurnstileBotCheck } from "./bot-check/turnstile.adapter.js";
 import { FakeBreachedPasswords } from "./breached-passwords/fake.adapter.js";
 import { HibpBreachedPasswords } from "./breached-passwords/hibp.adapter.js";
 import { FakeMailer } from "./mail/fake.adapter.js";
@@ -44,7 +47,15 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
           ? new HibpBreachedPasswords()
           : new FakeBreachedPasswords(),
     },
+    {
+      provide: BOT_CHECK,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        env.BOT_CHECK === "turnstile"
+          ? new TurnstileBotCheck(env.TURNSTILE_SECRET_KEY!)
+          : new FakeBotCheck(),
+    },
   ],
-  exports: [MAILER, BREACHED_PASSWORDS],
+  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK],
 })
 export class AdaptersModule {}

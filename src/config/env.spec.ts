@@ -12,6 +12,8 @@ const valid: Record<string, string | undefined> = {
   SMTP_PASSWORD: "live-secret",
   SMTP_FROM: "Àjo <noreply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
+  BOT_CHECK: "turnstile",
+  TURNSTILE_SECRET_KEY: "turnstile-secret-for-tests",
   JWT_SECRET: "j".repeat(48),
   FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
 };
@@ -109,6 +111,28 @@ describe("adapter configuration", () => {
     expect(() => loadEnv({ ...prod, BREACHED_PASSWORD_CHECK: "fake" })).toThrow(
       /BREACHED_PASSWORD_CHECK/,
     );
+    expect(() => loadEnv({ ...prod, BOT_CHECK: "fake" })).toThrow(/BOT_CHECK/);
+  });
+
+  it("needs the Turnstile secret when Turnstile is the bot check, and never accepts it as blank", () => {
+    expect(() => loadEnv({ ...prod, TURNSTILE_SECRET_KEY: undefined })).toThrow(
+      /TURNSTILE_SECRET_KEY/,
+    );
+    expect(() => loadEnv({ ...prod, TURNSTILE_SECRET_KEY: "" })).toThrow(/TURNSTILE_SECRET_KEY/);
+  });
+
+  it("defaults the bot check to the stand-in outside production, and does not echo the secret in errors", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://a:b@localhost/ajo",
+      REDIS_URL: "redis://localhost",
+    });
+    expect(env.BOT_CHECK).toBe("fake");
+    expect(() => loadEnv({ ...prod, BOT_CHECK: "nonsense" })).toThrow(/BOT_CHECK/);
+    try {
+      loadEnv({ ...prod, BOT_CHECK: "nonsense" });
+    } catch (error) {
+      expect(String(error)).not.toContain("turnstile-secret-for-tests");
+    }
   });
 
   it("needs SMTP credentials and a sender when SMTP is used", () => {
