@@ -31,6 +31,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: status,
         error: (details as { error?: string }).error ?? httpStatusName(status),
         message: (details as { message?: unknown }).message ?? exception.message,
+        // A fixed word the app can act on (e.g. "email_not_verified"), never shown to people.
+        ...(typeof (details as { code?: unknown }).code === "string"
+          ? { code: (details as { code: string }).code }
+          : {}),
         // Field-level problems a form can show (e.g. { password: ["too_short"] }).
         ...((details as { details?: unknown }).details
           ? { details: (details as { details: unknown }).details }

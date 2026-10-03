@@ -89,10 +89,7 @@ try {
     idempotencyKey: `mail-check:${Date.now()}`,
   });
   const from = env.MAIL_PROVIDER === "smtp" ? env.SMTP_FROM! : env.RESEND_FROM!;
-  const via =
-    env.MAIL_PROVIDER === "smtp"
-      ? `${env.SMTP_HOST}:${env.SMTP_PORT}`
-      : "Resend API";
+  const via = env.MAIL_PROVIDER === "smtp" ? `${env.SMTP_HOST}:${env.SMTP_PORT}` : "Resend API";
   console.log(`Sent to ${to} from ${from} via ${via} (MAIL_PROVIDER=${env.MAIL_PROVIDER}).`);
 } catch (error) {
   console.error(`Failed: ${(error as Error).message}`);

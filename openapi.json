@@ -282,6 +282,37 @@
         ]
       }
     },
+    "/api/v1/auth/email/resend": {
+      "post": {
+        "operationId": "SignUpController_resend",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Always the same answer, so it cannot be used to find out who has an account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/email/verify": {
       "post": {
         "operationId": "SignUpController_verify",
@@ -303,6 +334,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VerifiedResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "operationId": "PasswordResetController_forgot",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "PasswordResetController_reset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
                 }
               }
             }
@@ -339,6 +432,93 @@
         ]
       }
     },
+    "/api/v1/me/profile": {
+      "put": {
+        "operationId": "MeController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/me/pin": {
+      "put": {
+        "operationId": "MeController_setPin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/me/pin/verify": {
+      "post": {
+        "operationId": "MeController_verifyPin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -349,6 +529,47 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens, or a challenge to finish with POST /auth/login/mfa when a second step is on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TokenPairResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MfaChallengeResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The password is right but the email is not confirmed yet (`code: \"email_not_verified\"`). A new confirmation link has been emailed, within the usual limits."
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login/mfa": {
+      "post": {
+        "operationId": "AuthController_loginMfa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginMfaDto"
               }
             }
           }
@@ -438,6 +659,170 @@
           "auth"
         ]
       }
+    },
+    "/api/v1/auth/mfa/totp": {
+      "post": {
+        "operationId": "MfaController_enrol",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrolMfaResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already turned on"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      },
+      "delete": {
+        "operationId": "MfaController_disable",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableMfaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/totp/confirm": {
+      "post": {
+        "operationId": "MfaController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmMfaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/wallet": {
+      "get": {
+        "operationId": "WalletController_wallets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/transactions": {
+      "get": {
+        "operationId": "WalletController_transactions",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
+        ]
+      }
     }
   },
   "info": {
@@ -491,6 +876,18 @@
           "message"
         ]
       },
+      "ResendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ada@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "VerifyEmailDto": {
         "type": "object",
         "properties": {
@@ -514,6 +911,36 @@
           "verified"
         ]
       },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "ada@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token from the reset link"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ]
+      },
       "ProfileResponse": {
         "type": "object",
         "properties": {
@@ -528,28 +955,81 @@
           },
           "emailVerified": {
             "type": "boolean"
+          },
+          "mfaEnabled": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "NG",
+              "GB"
+            ],
+            "nullable": true
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "solo",
+              "circle",
+              "both"
+            ],
+            "nullable": true
+          },
+          "hasPin": {
+            "type": "boolean"
+          },
+          "onboarded": {
+            "type": "boolean",
+            "description": "Country, goal and PIN are all set"
           }
         },
         "required": [
           "id",
           "email",
           "displayName",
-          "emailVerified"
+          "emailVerified",
+          "mfaEnabled",
+          "country",
+          "goal",
+          "hasPin",
+          "onboarded"
         ]
       },
-      "LoginDto": {
+      "UpdateProfileDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string"
+          "country": {
+            "type": "string",
+            "enum": [
+              "NG",
+              "GB"
+            ]
           },
-          "password": {
-            "type": "string"
+          "goal": {
+            "type": "string",
+            "enum": [
+              "solo",
+              "circle",
+              "both"
+            ]
           }
         },
         "required": [
-          "email",
-          "password"
+          "country",
+          "goal"
+        ]
+      },
+      "PinDto": {
+        "type": "object",
+        "properties": {
+          "pin": {
+            "type": "string",
+            "description": "Six digits"
+          }
+        },
+        "required": [
+          "pin"
         ]
       },
       "TokenPairResponse": {
@@ -579,6 +1059,59 @@
           "refreshToken"
         ]
       },
+      "MfaChallengeResponse": {
+        "type": "object",
+        "properties": {
+          "mfaRequired": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "mfaToken": {
+            "type": "string",
+            "description": "Single-use token for POST /auth/login/mfa; valid for 5 minutes"
+          }
+        },
+        "required": [
+          "mfaRequired",
+          "mfaToken"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginMfaDto": {
+        "type": "object",
+        "properties": {
+          "mfaToken": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit code from the authenticator app"
+          },
+          "recoveryCode": {
+            "type": "string",
+            "description": "One of the saved recovery codes"
+          }
+        },
+        "required": [
+          "mfaToken"
+        ]
+      },
       "RefreshDto": {
         "type": "object",
         "properties": {
@@ -588,6 +1121,192 @@
         },
         "required": [
           "refreshToken"
+        ]
+      },
+      "EnrolMfaResponse": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "Base32 secret to type into an authenticator app"
+          },
+          "otpauthUri": {
+            "type": "string",
+            "description": "otpauth:// link for a QR code"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUri"
+        ]
+      },
+      "ConfirmMfaDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "6-digit code from the authenticator app"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "RecoveryCodesResponse": {
+        "type": "object",
+        "properties": {
+          "recoveryCodes": {
+            "description": "Shown once; each works one time",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "recoveryCodes"
+        ]
+      },
+      "DisableMfaDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit code from the authenticator app"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ]
+      },
+      "MoneyResponse": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole number in the currency's smallest unit (kobo, pence, cents)",
+            "example": "250000"
+          },
+          "currency": {
+            "type": "string",
+            "example": "NGN"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ]
+      },
+      "WalletResponse": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "NGN"
+          },
+          "available": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "locked": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "savings": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          }
+        },
+        "required": [
+          "currency",
+          "available",
+          "locked",
+          "savings"
+        ]
+      },
+      "WalletsResponse": {
+        "type": "object",
+        "properties": {
+          "wallets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletResponse"
+            }
+          }
+        },
+        "required": [
+          "wallets"
+        ]
+      },
+      "TransactionItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id of this row, also the paging cursor"
+          },
+          "transactionId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "example": "funding"
+          },
+          "account": {
+            "type": "string",
+            "enum": [
+              "available",
+              "locked",
+              "savings"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "amount": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "transactionId",
+          "type",
+          "account",
+          "direction",
+          "amount",
+          "currency",
+          "createdAt"
+        ]
+      },
+      "TransactionsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionItem"
+            }
+          },
+          "next": {
+            "type": "object",
+            "nullable": true,
+            "description": "Pass as `before` for the next page; null at the end"
+          }
+        },
+        "required": [
+          "items",
+          "next"
         ]
       }
     }

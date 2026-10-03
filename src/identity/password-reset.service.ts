@@ -104,6 +104,7 @@ export class PasswordResetService {
         tx,
         `UPDATE users
             SET password_hash = $2,
+                email_verified = true,
                 email_verified_at = coalesce(email_verified_at, now()),
                 failed_login_count = 0,
                 locked_until = NULL,

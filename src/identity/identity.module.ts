@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { EmailVerification } from "./email-verification.service.js";
 import { MeController } from "./me.controller.js";
 import { PinService } from "./pin.service.js";
 import { PasswordHasher } from "./password-hasher.js";
@@ -9,7 +10,7 @@ import { SignUpService } from "./sign-up.service.js";
 
 @Module({
   controllers: [SignUpController, PasswordResetController, MeController],
-  providers: [PasswordHasher, SignUpService, PasswordResetService, PinService],
-  exports: [PasswordHasher],
+  providers: [PasswordHasher, EmailVerification, SignUpService, PasswordResetService, PinService],
+  exports: [PasswordHasher, EmailVerification],
 })
 export class IdentityModule {}

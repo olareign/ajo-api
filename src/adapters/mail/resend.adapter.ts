@@ -6,34 +6,45 @@ export type ResendSettings = Readonly<{
   from: string;
 }>;
 
-export class ResendMailer implements Mailer {
-  private readonly client: Resend;
+/** Only the error's short code and HTTP status are kept: its text can hold the key or recipient. */
+function rejected(error: unknown): Error {
+  const { name, code, statusCode } = error as {
+    name?: unknown;
+    code?: unknown;
+    statusCode?: unknown;
+  };
+  const detail = [code ?? name, statusCode].filter(
+    (x) => typeof x === "string" || typeof x === "number",
+  );
+  return new Error(
+    `Email provider rejected the message (Resend${detail.length ? ` ${detail.join(" ")}` : ""})`,
+  );
+}
 
-  constructor(private readonly settings: ResendSettings) {
-    this.client = new Resend(settings.apiKey);
-  }
+export class ResendMailer implements Mailer {
+  constructor(
+    private readonly settings: ResendSettings,
+    private readonly client: Resend = new Resend(settings.apiKey),
+  ) {}
 
   async send(message: MailMessage): Promise<void> {
+    let result;
     try {
-      await this.client.emails.send({
-        from: this.settings.from,
-        to: message.to,
-        subject: message.subject,
-        text: message.text,
-        html: message.html,
-        headers: {
-          "X-Idempotency-Key": message.idempotencyKey,
+      result = await this.client.emails.send(
+        {
+          from: this.settings.from,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
         },
-      });
+        { idempotencyKey: message.idempotencyKey },
+      );
     } catch (error) {
-      const code = (error as { code?: unknown }).code;
-      const statusCode = (error as { statusCode?: unknown }).statusCode;
-      const detail = [code, statusCode].filter(
-        (x) => typeof x === "string" || typeof x === "number",
-      );
-      throw new Error(
-        `Email provider rejected the message (Resend${detail.length ? ` ${detail.join(" ")}` : ""})`,
-      );
+      throw rejected(error);
     }
+    // The SDK reports API errors (bad key, unverified domain, rate limit) in the result instead
+    // of throwing, so it must be checked or a failed send looks like a success.
+    if (result.error) throw rejected(result.error);
   }
 }
