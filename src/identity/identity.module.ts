@@ -7,10 +7,18 @@ import { PasswordResetController } from "./password-reset.controller.js";
 import { PasswordResetService } from "./password-reset.service.js";
 import { SignUpController } from "./sign-up.controller.js";
 import { SignUpService } from "./sign-up.service.js";
+import { UsernameService } from "./username.service.js";
 
 @Module({
   controllers: [SignUpController, PasswordResetController, MeController],
-  providers: [PasswordHasher, EmailVerification, SignUpService, PasswordResetService, PinService],
+  providers: [
+    PasswordHasher,
+    EmailVerification,
+    SignUpService,
+    PasswordResetService,
+    PinService,
+    UsernameService,
+  ],
   exports: [PasswordHasher, EmailVerification],
 })
 export class IdentityModule {}
