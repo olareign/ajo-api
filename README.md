@@ -30,15 +30,17 @@ API docs are served at `/api/docs` when `API_DOCS_ENABLED=true` (refused in prod
 
 ## Commands
 
-| Command                                                | What it does                                                                     |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `pnpm test` / `pnpm test:watch`                        | Unit and HTTP tests                                                              |
-| `pnpm test:integration`                                | Integration tests against real Postgres and Redis (needs Docker)                 |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`   | Static checks                                                                    |
-| `pnpm build`                                           | Compile to `dist/`                                                               |
-| `pnpm migration:create src/database/migrations/<name>` | New empty migration; write the SQL by hand, then add it to `migrations/index.ts` |
-| `pnpm migration:run`                                   | Apply pending migrations (Render runs this before each deploy)                   |
-| `pnpm openapi:generate` / `pnpm openapi:check`         | Write or verify `openapi.json`                                                   |
+| Command                                                | What it does                                                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `pnpm test` / `pnpm test:watch`                        | Unit and HTTP tests                                                                                   |
+| `pnpm test:integration`                                | Integration tests against real Postgres and Redis (needs Docker)                                      |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`   | Static checks                                                                                         |
+| `pnpm build`                                           | Compile to `dist/`                                                                                    |
+| `pnpm migration:create src/database/migrations/<name>` | New empty migration; write the SQL by hand, then add it to `migrations/index.ts`                      |
+| `pnpm migration:run`                                   | Apply pending migrations (Render runs this before each deploy)                                        |
+| `pnpm mail:check you@example.com`                      | Send one real email with the configured provider (`MAIL_PROVIDER=smtp` or `resend`) to prove it works |
+| `pnpm retention:run`                                   | Delete expired sessions and tokens once (the worker also does this every six hours)                   |
+| `pnpm openapi:generate` / `pnpm openapi:check`         | Write or verify `openapi.json`                                                                        |
 
 ## Security baseline
 

@@ -6,6 +6,7 @@ import { LoggerModule } from "nestjs-pino";
 import type { Env } from "./config/env.js";
 import { ENV, EnvModule } from "./config/env.module.js";
 import { buildDataSourceOptions } from "./database/database-options.js";
+import { MaintenanceModule } from "./maintenance/maintenance.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
 
@@ -26,6 +27,7 @@ import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
       inject: [REDIS_CLIENT],
       useFactory: (redis: Redis) => ({ connection: redis }),
     }),
+    MaintenanceModule,
   ],
 })
 export class WorkerModule {}

@@ -1,6 +1,7 @@
 import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { sql } from "../database/sql.js";
+import { EmailVerification } from "../identity/email-verification.service.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { AccessTokens } from "./access-tokens.js";
@@ -10,6 +11,10 @@ export const MAX_FAILED_LOGINS = 10;
 export const LOCKOUT_MINUTES = 15;
 export const SESSION_MAX_DAYS = 30;
 export const REFRESH_IDLE_DAYS = 7;
+/** Sign-ins beyond this many at once end the oldest, so sessions cannot pile up without limit. */
+export const MAX_ACTIVE_SESSIONS = 10;
+/** Sent with the refusal so the app can send the person to "check your email". */
+export const EMAIL_NOT_VERIFIED = "email_not_verified";
 export const BAD_CREDENTIALS = "Email or password is incorrect.";
 const SESSION_ENDED = "Your session has ended. Please sign in again.";
 
@@ -27,8 +32,10 @@ export type LoginResult = TokenPair | Readonly<{ mfaRequired: true; mfaToken: st
 
 type UserRow = {
   id: string;
+  email: string;
+  display_name: string;
   password_hash: string;
-  email_verified_at: Date | null;
+  email_verified: boolean;
   status: string;
   failed_login_count: number;
   locked: boolean;
@@ -39,6 +46,7 @@ export class SessionService {
   constructor(
     private readonly db: DataSource,
     private readonly hasher: PasswordHasher,
+    private readonly verification: EmailVerification,
     @Inject(AccessTokens) private readonly accessTokens: AccessTokens,
     private readonly mfa: MfaService,
   ) {}
@@ -49,7 +57,7 @@ export class SessionService {
       // Row lock serialises concurrent guesses against one account.
       const [user] = await sql<UserRow>(
         tx,
-        `SELECT id, password_hash, email_verified_at, status, failed_login_count,
+        `SELECT id, email, display_name, password_hash, email_verified, status, failed_login_count,
                 coalesce(locked_until > now(), false) AS locked
            FROM users WHERE email = $1 FOR UPDATE`,
         [email],
@@ -74,7 +82,12 @@ export class SessionService {
       await sql(tx, `UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = $1`, [
         user.id,
       ]);
-      if (!user.email_verified_at) return { kind: "unverified" } as const;
+      if (!user.email_verified) {
+        // Only someone who knows the password gets here. Send a fresh link (within the limits
+        // that apply to every verification email) so they can finish without hunting for the old one.
+        const link = await this.verification.createLinkIfAllowed(tx, user.id);
+        return { kind: "unverified", user, link } as const;
+      }
 
       if (await this.mfa.isEnabled(tx, user.id)) {
         return { kind: "mfa", token: await this.mfa.createChallenge(tx, user.id) } as const;
@@ -85,7 +98,13 @@ export class SessionService {
 
     if (outcome.kind === "bad_credentials") throw new UnauthorizedException(BAD_CREDENTIALS);
     if (outcome.kind === "unverified") {
-      throw new ForbiddenException("Verify your email before signing in.");
+      if (outcome.link) {
+        void this.verification.send(outcome.user.email, outcome.user.display_name, outcome.link);
+      }
+      throw new ForbiddenException({
+        message: "Verify your email before signing in.",
+        code: EMAIL_NOT_VERIFIED,
+      });
     }
     if (outcome.kind === "mfa") return { mfaRequired: true, mfaToken: outcome.token };
     return this.tokenPair(outcome.userId, outcome.sessionId, outcome.refreshToken);
@@ -187,6 +206,14 @@ export class SessionService {
        VALUES ($1, now() + make_interval(days => $2), $3, left($4, 512))
        RETURNING id`,
       [userId, SESSION_MAX_DAYS, client.ip ?? null, client.userAgent ?? null],
+    );
+    await sql(
+      tx,
+      `UPDATE sessions SET revoked_at = now(), revoked_reason = 'session_limit'
+        WHERE id IN (SELECT id FROM sessions
+                      WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+                      ORDER BY created_at DESC, id DESC OFFSET $2)`,
+      [userId, MAX_ACTIVE_SESSIONS],
     );
     return { sessionId: session!.id, refreshToken: await this.issueRefreshToken(tx, session!.id) };
   }

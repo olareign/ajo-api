@@ -25,6 +25,7 @@
     "openapi:generate": "env NODE_ENV=test DATABASE_URL=postgres://unused@localhost/unused REDIS_URL=redis://localhost node dist/openapi.js openapi.json",
     "migration:run": "node dist/database/migrate.js",
     "mail:check": "node dist/mail-check.js",
+    "retention:run": "node dist/retention.js",
     "openapi:check": "env NODE_ENV=test DATABASE_URL=postgres://unused@localhost/unused REDIS_URL=redis://localhost node dist/openapi.js openapi.check.json && diff -u openapi.json openapi.check.json && rm openapi.check.json",
     "migration:create": "typeorm migration:create"
   },

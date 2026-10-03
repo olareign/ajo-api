@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { DataSource } from "typeorm";
 import { sql } from "../database/sql.js";
 import {
@@ -8,12 +9,12 @@ import {
 import { MAILER, type Mailer } from "../adapters/mail/mailer.port.js";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
-import { accountExistsEmail, verificationEmail } from "./emails.js";
+import { accountExistsEmail } from "./emails.js";
+import { EmailVerification } from "./email-verification.service.js";
 import { PasswordHasher } from "./password-hasher.js";
 import { checkPassword } from "./password-policy.js";
-import { createOneTimeToken, hashToken } from "./tokens.js";
+import { hashToken } from "./tokens.js";
 
-export const VERIFICATION_TTL_HOURS = 24;
 export const INVALID_LINK = "This link is invalid or has expired.";
 
 @Injectable()
@@ -25,6 +26,7 @@ export class SignUpService {
     private readonly hasher: PasswordHasher,
     @Inject(BREACHED_PASSWORDS) private readonly breached: BreachedPasswords,
     @Inject(MAILER) private readonly mailer: Mailer,
+    private readonly verification: EmailVerification,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -44,7 +46,6 @@ export class SignUpService {
 
     // Hash before looking anything up, so both paths take the same time.
     const passwordHash = await this.hasher.hash(input.password);
-    const { token, hash } = createOneTimeToken();
 
     const created = await this.db.transaction(async (tx) => {
       const rows = await sql<{ id: string }>(
@@ -56,31 +57,44 @@ export class SignUpService {
         [input.email, passwordHash, input.displayName],
       );
       const userId = rows[0]?.id;
-      if (userId) {
-        await sql(
-          tx,
-          `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
-           VALUES ($1, $2, now() + make_interval(hours => $3))`,
-          [userId, hash, VERIFICATION_TTL_HOURS],
-        );
-      }
-      return userId;
+      return userId ? await this.verification.createLink(tx, userId) : null;
     });
 
-    const email = created
-      ? verificationEmail({
-          to: input.email,
-          name: input.displayName,
-          link: `${this.env.WEB_APP_URL}/verify-email?token=${token}`,
-        })
-      : accountExistsEmail({ to: input.email, signInLink: `${this.env.WEB_APP_URL}/sign-in` });
-
-    try {
-      await this.mailer.send({ to: input.email, idempotencyKey: hash, ...email });
-    } catch (error) {
+    if (created) {
       // The account exists either way; the user can ask for a new link.
+      await this.verification.send(input.email, input.displayName, created);
+      return;
+    }
+    try {
+      await this.mailer.send({
+        to: input.email,
+        idempotencyKey: `exists-${randomUUID()}`,
+        ...accountExistsEmail({ to: input.email, signInLink: `${this.env.WEB_APP_URL}/sign-in` }),
+      });
+    } catch (error) {
       this.logger.error({ err: error }, "Could not send sign-up email");
     }
+  }
+
+  /**
+   * Sends a new link to an account that still needs confirming. Answers nothing about whether
+   * the address has an account, and the email goes out without waiting, so neither the answer
+   * nor its timing tells.
+   */
+  async resendVerification(email: string): Promise<void> {
+    const pending = await this.db.transaction(async (tx) => {
+      const [user] = await sql<{ id: string; email: string; display_name: string }>(
+        tx,
+        `SELECT id, email, display_name FROM users
+          WHERE email = $1 AND NOT email_verified AND status = 'active' FOR UPDATE`,
+        [email],
+      );
+      if (!user) return null;
+      const link = await this.verification.createLinkIfAllowed(tx, user.id);
+      return link ? { user, link } : null;
+    });
+    if (pending)
+      void this.verification.send(pending.user.email, pending.user.display_name, pending.link);
   }
 
   /** Consumes a verification token exactly once, atomically. */
@@ -98,7 +112,10 @@ export class SignUpService {
       if (!userId) return false;
       await sql(
         tx,
-        `UPDATE users SET email_verified_at = coalesce(email_verified_at, now()), updated_at = now()
+        `UPDATE users
+            SET email_verified = true,
+                email_verified_at = coalesce(email_verified_at, now()),
+                updated_at = now()
           WHERE id = $1`,
         [userId],
       );

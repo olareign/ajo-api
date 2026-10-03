@@ -31,6 +31,14 @@ export class VerifyEmailDto {
   token!: string;
 }
 
+export class ResendVerificationDto {
+  @ApiProperty({ example: "ada@example.com" })
+  @Transform(trim)
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+}
+
 export class MessageResponse {
   @ApiProperty()
   message!: string;

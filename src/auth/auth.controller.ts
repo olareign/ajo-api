@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiExtraModels,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -50,6 +51,10 @@ export class AuthController {
         { $ref: getSchemaPath(MfaChallengeResponse) },
       ],
     },
+  })
+  @ApiForbiddenResponse({
+    description:
+      'The password is right but the email is not confirmed yet (`code: "email_not_verified"`). A new confirmation link has been emailed, within the usual limits.',
   })
   login(@Body() body: LoginDto, @Req() req: Request): Promise<LoginResult> {
     return this.sessions.login(body.email, body.password, {
