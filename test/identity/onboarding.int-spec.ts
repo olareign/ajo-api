@@ -51,10 +51,17 @@ describe("onboarding", () => {
     });
 
     await call("put", "/api/v1/me/pin", token, { pin: "493817" }).expect(204);
+    // Country, goal and a PIN are not enough any more: a username is part of being set up.
     expect((await call("get", "/api/v1/me", token)).body).toMatchObject({
       hasPin: true,
-      onboarded: true,
+      username: null,
+      onboarded: false,
     });
+
+    await call("put", "/api/v1/me/username", token, {
+      username: `ob${Date.now().toString(36)}`,
+    }).expect(204);
+    expect((await call("get", "/api/v1/me", token)).body).toMatchObject({ onboarded: true });
   });
 
   it("only accepts supported countries and goals", async () => {

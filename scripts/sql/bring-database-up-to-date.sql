@@ -313,6 +313,23 @@ CREATE INDEX IF NOT EXISTS email_verification_tokens_expires_at_idx ON email_ver
 CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_idx ON password_reset_tokens (expires_at);
 CREATE INDEX IF NOT EXISTS mfa_challenges_expires_at_idx ON mfa_challenges (expires_at);
 
+-- 1790900050000 AddUsername -----------------------------------------------------------------
+-- A public handle: case-insensitive unique, and the database refuses anything that is not 3 to 20
+-- lowercase letters, digits or underscores starting with a letter. Empty until chosen at onboarding.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username citext;
+DO $do$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'users_username_key' AND conrelid = 'users'::regclass) THEN
+    ALTER TABLE users ADD CONSTRAINT users_username_key UNIQUE (username);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'users_username_format' AND conrelid = 'users'::regclass) THEN
+    ALTER TABLE users ADD CONSTRAINT users_username_format
+      CHECK (username::text ~ '^[a-z][a-z0-9_]{2,19}$');
+  END IF;
+END $do$;
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -332,17 +349,18 @@ SELECT v.ts, v.name
     (1790900020000::bigint, 'CreateLedger1790900020000'),
     (1790900030000::bigint, 'CreateOnboarding1790900030000'),
     (1790900040000::bigint, 'AddEmailVerified1790900040000'),
-    (1790900041000::bigint, 'AddRetentionSupport1790900041000')
+    (1790900041000::bigint, 'AddRetentionSupport1790900041000'),
+    (1790900050000::bigint, 'AddUsername1790900050000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
--- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false,
--- and all nine migrations must be listed.
+-- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
+-- `username` must be there (citext, nullable); and all ten migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
- WHERE table_schema = current_schema() AND table_name = 'users' AND column_name LIKE 'email_verified%'
+ WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')
  ORDER BY column_name;
 
 SELECT count(*) AS migrations_recorded,

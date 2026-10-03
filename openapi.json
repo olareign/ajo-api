@@ -467,6 +467,74 @@
         ]
       }
     },
+    "/api/v1/me/username/available": {
+      "get": {
+        "operationId": "MeController_usernameAvailable",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "ada_ola",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsernameAvailableResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/me/username": {
+      "put": {
+        "operationId": "MeController_setUsername",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUsernameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Taken or kept by the company, or you already have one"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/me/pin": {
       "put": {
         "operationId": "MeController_setPin",
@@ -970,6 +1038,12 @@
           "mfaEnabled": {
             "type": "boolean"
           },
+          "username": {
+            "type": "object",
+            "nullable": true,
+            "example": "ada_ola",
+            "description": "Chosen during setup"
+          },
           "country": {
             "type": "string",
             "enum": [
@@ -992,7 +1066,7 @@
           },
           "onboarded": {
             "type": "boolean",
-            "description": "Country, goal and PIN are all set"
+            "description": "Country, goal, username and PIN are all set"
           }
         },
         "required": [
@@ -1001,6 +1075,7 @@
           "displayName",
           "emailVerified",
           "mfaEnabled",
+          "username",
           "country",
           "goal",
           "hasPin",
@@ -1029,6 +1104,30 @@
         "required": [
           "country",
           "goal"
+        ]
+      },
+      "UsernameAvailableResponse": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available"
+        ]
+      },
+      "SetUsernameDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "ada_ola",
+            "description": "3 to 20 characters: a letter first, then letters, digits or underscores"
+          }
+        },
+        "required": [
+          "username"
         ]
       },
       "PinDto": {
