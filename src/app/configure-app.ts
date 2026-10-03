@@ -4,6 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import type { Env } from "../config/env.js";
 import { AllExceptionsFilter } from "./all-exceptions.filter.js";
+import { clientContextMiddleware } from "./client-context.js";
 import { requestIdMiddleware } from "./request-id.js";
 
 export const API_PREFIX = "api/v1";
@@ -21,6 +22,7 @@ export function configureApp(app: NestExpressApplication, env: Env): void {
   app.disable("x-powered-by");
 
   app.use(requestIdMiddleware);
+  app.use(clientContextMiddleware(env.BFF_SHARED_SECRET));
   app.use(
     helmet({
       contentSecurityPolicy: {

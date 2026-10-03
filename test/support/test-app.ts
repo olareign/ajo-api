@@ -7,7 +7,7 @@ import type { Env } from "../../src/config/env.js";
 import { ENV } from "../../src/config/env.module.js";
 import { createDataSource } from "../../src/database/data-source.js";
 
-export function testEnv(): Record<string, string> {
+export function testEnv(overrides: Record<string, string> = {}): Record<string, string> {
   return {
     NODE_ENV: "test",
     LOG_LEVEL: "error",
@@ -16,12 +16,15 @@ export function testEnv(): Record<string, string> {
     WEB_APP_URL: "https://app.ajo.test",
     MAIL_PROVIDER: "fake",
     BREACHED_PASSWORD_CHECK: "fake",
+    ...overrides,
   };
 }
 
 /** Migrates the shared database and boots the real AppModule with production hardening. */
-export async function createTestApp(): Promise<NestExpressApplication> {
-  const env = testEnv();
+export async function createTestApp(
+  overrides: Record<string, string> = {},
+): Promise<NestExpressApplication> {
+  const env = testEnv(overrides);
   const dataSource = await createDataSource(env).initialize();
   await dataSource.runMigrations({ transaction: "each" });
   await dataSource.destroy();

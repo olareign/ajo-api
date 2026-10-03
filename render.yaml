@@ -46,6 +46,10 @@ services:
         value: turnstile
       - key: TURNSTILE_SECRET_KEY
         sync: false
+      # Shared with the web app's server (the same value in its BFF_SHARED_SECRET): lets the API see each
+      # person's own address and device, so rate limits and sign-in alerts are per person.
+      - key: BFF_SHARED_SECRET
+        sync: false
       # Signs access tokens; only the API needs it.
       - key: JWT_SECRET
         generateValue: true

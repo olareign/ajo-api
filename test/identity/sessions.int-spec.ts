@@ -106,6 +106,13 @@ describe("authentication guard", () => {
   });
 });
 
+/** Makes a spent refresh token look as if it was spent a minute ago, past the grace window. */
+const agedBeyondGrace = (refreshToken: string) =>
+  db.query(
+    `UPDATE refresh_tokens SET used_at = now() - interval '1 minute' WHERE token_hash = encode(sha256(convert_to($1::text, 'UTF8')), 'hex')`,
+    [refreshToken],
+  );
+
 describe("refresh tokens", () => {
   it("rotate on every use", async () => {
     const user = await createVerifiedUser(app);
@@ -119,10 +126,50 @@ describe("refresh tokens", () => {
     const user = await createVerifiedUser(app);
     const first = (await login(user.email, user.password).expect(200)).body;
     const second = (await refresh(first.refreshToken).expect(200)).body;
+    await agedBeyondGrace(first.refreshToken);
 
     await refresh(first.refreshToken).expect(401);
     await me(second.accessToken).expect(401);
     await refresh(second.refreshToken).expect(401);
+  });
+
+  describe("two requests at once on an expired access token", () => {
+    it("both succeed and the session lives: the token just used is still accepted for a few seconds", async () => {
+      const user = await createVerifiedUser(app);
+      const first = (await login(user.email, user.password).expect(200)).body;
+
+      const [a, b] = await Promise.all([refresh(first.refreshToken), refresh(first.refreshToken)]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+      expect(a.body.refreshToken).not.toBe(b.body.refreshToken);
+
+      // Whichever answer the browser keeps works, and the session was not ended.
+      await me(a.body.accessToken).expect(200);
+      await refresh(b.body.refreshToken).expect(200);
+    });
+
+    it("still ends the session when the same old token comes back after the window, as a thief would", async () => {
+      const user = await createVerifiedUser(app);
+      const first = (await login(user.email, user.password).expect(200)).body;
+      const second = (await refresh(first.refreshToken).expect(200)).body;
+      await refresh(first.refreshToken).expect(200); // inside the window: the other tab
+      await agedBeyondGrace(first.refreshToken);
+
+      await refresh(first.refreshToken).expect(401);
+      await me(second.accessToken).expect(401);
+    });
+
+    it("does not bring back a session that has already ended, however recently the token was used", async () => {
+      const user = await createVerifiedUser(app);
+      const first = (await login(user.email, user.password).expect(200)).body;
+      const second = (await refresh(first.refreshToken).expect(200)).body;
+      await request(http())
+        .post("/api/v1/auth/logout")
+        .set("X-Forwarded-For", newIp())
+        .set("Authorization", `Bearer ${second.accessToken}`)
+        .expect(204);
+
+      await refresh(first.refreshToken).expect(401);
+    });
   });
 
   it("expire when the session has been idle too long", async () => {

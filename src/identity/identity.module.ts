@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { DevicesService } from "./devices.service.js";
 import { EmailVerification } from "./email-verification.service.js";
 import { MeController } from "./me.controller.js";
 import { PinService } from "./pin.service.js";
@@ -18,7 +19,8 @@ import { UsernameService } from "./username.service.js";
     PasswordResetService,
     PinService,
     UsernameService,
+    DevicesService,
   ],
-  exports: [PasswordHasher, EmailVerification],
+  exports: [PasswordHasher, EmailVerification, DevicesService],
 })
 export class IdentityModule {}
