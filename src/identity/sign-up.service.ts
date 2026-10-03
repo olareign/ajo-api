@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { DataSource } from "typeorm";
 import { sql } from "../database/sql.js";
@@ -6,6 +12,7 @@ import {
   BREACHED_PASSWORDS,
   type BreachedPasswords,
 } from "../adapters/breached-passwords/breached-passwords.port.js";
+import { BOT_CHECK, type BotCheck } from "../adapters/bot-check/bot-check.port.js";
 import { MAILER, type Mailer } from "../adapters/mail/mailer.port.js";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
@@ -16,6 +23,8 @@ import { checkPassword } from "./password-policy.js";
 import { hashToken } from "./tokens.js";
 
 export const INVALID_LINK = "This link is invalid or has expired.";
+export const BOT_CHECK_FAILED = "bot_check_failed";
+export const BOT_CHECK_UNAVAILABLE = "bot_check_unavailable";
 
 @Injectable()
 export class SignUpService {
@@ -25,6 +34,7 @@ export class SignUpService {
     private readonly db: DataSource,
     private readonly hasher: PasswordHasher,
     @Inject(BREACHED_PASSWORDS) private readonly breached: BreachedPasswords,
+    @Inject(BOT_CHECK) private readonly botCheck: BotCheck,
     @Inject(MAILER) private readonly mailer: Mailer,
     private readonly verification: EmailVerification,
     @Inject(ENV) private readonly env: Env,
@@ -35,7 +45,27 @@ export class SignUpService {
    * already registered (the owner gets a warning email instead), so sign-up cannot be
    * used to discover who has an account.
    */
-  async signUp(input: { email: string; password: string; displayName: string }): Promise<void> {
+  async signUp(input: {
+    email: string;
+    password: string;
+    displayName: string;
+    botToken?: string;
+  }): Promise<void> {
+    // First, before any hashing, lookup or network call about the password: a bot costs us nothing.
+    const human = await this.botCheck.verify(input.botToken);
+    if (human === "failed") {
+      throw new BadRequestException({
+        message: "Please complete the check and try again.",
+        code: BOT_CHECK_FAILED,
+      });
+    }
+    if (human === "unavailable") {
+      throw new ServiceUnavailableException({
+        message: "We couldn't run the check just now. Please try again in a moment.",
+        code: BOT_CHECK_UNAVAILABLE,
+      });
+    }
+
     const problems = await checkPassword(input.password, input.email, this.breached);
     if (problems.length > 0) {
       throw new BadRequestException({

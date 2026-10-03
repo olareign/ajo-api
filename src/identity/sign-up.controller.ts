@@ -1,6 +1,12 @@
 import { Public } from "../auth/public.decorator.js";
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
-import { ApiAcceptedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import {
+  ApiAcceptedResponse,
+  ApiBadRequestResponse,
+  ApiOkResponse,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
 import {
   MessageResponse,
@@ -23,6 +29,14 @@ export class SignUpController {
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 5, ttl: HOUR } })
   @ApiAcceptedResponse({ type: MessageResponse })
+  @ApiBadRequestResponse({
+    description:
+      'The bot check failed (`code: "bot_check_failed"`: the token is wrong, used or expired), or a field is invalid. Nothing is created.',
+  })
+  @ApiServiceUnavailableResponse({
+    description:
+      'The bot check could not run (`code: "bot_check_unavailable"`). The person should try again; nothing is created.',
+  })
   async signUp(@Body() body: SignUpDto): Promise<MessageResponse> {
     await this.signUps.signUp(body);
     return { message: "Check your email to continue." };

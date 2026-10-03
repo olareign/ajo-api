@@ -28,6 +28,41 @@ afterAll(async () => {
   await app?.close();
 });
 
+describe("POST /auth/sign-up bot check", () => {
+  const person = () => ({ email: uniqueEmail(), password: goodPassword, displayName: "Ada" });
+  const created = async (email: string) =>
+    (await db.query("SELECT 1 FROM users WHERE email = $1", [email])).length;
+
+  it("refuses a failed check before anything is created or sent", async () => {
+    const body = { ...person(), botToken: "fail-bot-check" };
+    const res = await signUp(body).expect(400);
+    expect(res.body).toMatchObject({
+      code: "bot_check_failed",
+      message: "Please complete the check and try again.",
+    });
+    expect(await created(body.email)).toBe(0);
+    expect(mailer.lastTo(body.email)).toBeUndefined();
+  });
+
+  it("says so, with a different answer, when the check itself cannot run", async () => {
+    const body = { ...person(), botToken: "unavailable-bot-check" };
+    const res = await signUp(body).expect(503);
+    expect(res.body).toMatchObject({ code: "bot_check_unavailable" });
+    expect(await created(body.email)).toBe(0);
+  });
+
+  it("lets a passed check through", async () => {
+    const body = { ...person(), botToken: "any-good-token" };
+    await signUp(body).expect(202);
+    expect(await created(body.email)).toBe(1);
+  });
+
+  it("refuses a token that is not a string or is far too long, as every other field is bounded", async () => {
+    await signUp({ ...person(), botToken: 123 }).expect(400);
+    await signUp({ ...person(), botToken: "x".repeat(2049) }).expect(400);
+  });
+});
+
 describe("POST /auth/sign-up", () => {
   it("creates an unverified account and emails a verification link", async () => {
     const email = uniqueEmail();

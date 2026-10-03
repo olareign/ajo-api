@@ -40,6 +40,12 @@ services:
         sync: false
       - key: BREACHED_PASSWORD_CHECK
         value: hibp
+      # Bot protection on sign-up (Cloudflare Turnstile). Set the SECRET key in the dashboard,
+      # never the site key; the API refuses to start in production without it.
+      - key: BOT_CHECK
+        value: turnstile
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
       # Signs access tokens; only the API needs it.
       - key: JWT_SECRET
         generateValue: true
@@ -80,6 +86,11 @@ services:
         sync: false
       - key: BREACHED_PASSWORD_CHECK
         value: hibp
+      # Every process loads the same environment rules, so the worker needs these too.
+      - key: BOT_CHECK
+        value: turnstile
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
 
   - type: keyvalue
     name: ajo-redis

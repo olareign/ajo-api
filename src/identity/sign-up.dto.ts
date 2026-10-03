@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsEmail, IsString, Length, Matches, MaxLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from "class-validator";
+import { BOT_TOKEN_MAX_LENGTH } from "../adapters/bot-check/bot-check.port.js";
 
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
@@ -22,6 +23,17 @@ export class SignUpDto {
   @IsString()
   @Length(1, 80)
   displayName!: string;
+
+  @ApiProperty({
+    required: false,
+    maxLength: BOT_TOKEN_MAX_LENGTH,
+    description:
+      "Cloudflare Turnstile token from the sign-up form. Required when bot protection is on; single-use.",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(BOT_TOKEN_MAX_LENGTH)
+  botToken?: string;
 }
 
 export class VerifyEmailDto {

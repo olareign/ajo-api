@@ -10,6 +10,8 @@ export const PRODUCTION_TEST_ENV: Record<string, string> = {
   SMTP_PASSWORD: "not-a-real-password",
   SMTP_FROM: "Àjo <noreply@ajo.example>",
   BREACHED_PASSWORD_CHECK: "hibp",
+  BOT_CHECK: "turnstile",
+  TURNSTILE_SECRET_KEY: "test-only-turnstile-secret",
   JWT_SECRET: "test-only-signing-key-not-used-anywhere-else",
   FIELD_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString("base64"),
 };
