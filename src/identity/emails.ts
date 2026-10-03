@@ -71,3 +71,23 @@ export function passwordChangedEmail(input: {
     html: layout(lines, { label: "Sign in", href: input.signInLink }),
   };
 }
+
+export function newDeviceEmail(input: {
+  to: string;
+  name: string;
+  device: string;
+  when: Date;
+  resetLink: string;
+}): Email {
+  const lines = [
+    `Hi ${input.name},`,
+    `Your Àjọ account was just signed in to from a device we haven't seen before: ${input.device}, on ${input.when.toUTCString()}.`,
+    "If this was you, there's nothing to do.",
+    "If it wasn't, change your password now: that signs every other device out. You can also sign out of all devices from the Me screen in the app.",
+  ];
+  return {
+    subject: "New sign-in to your Àjọ account",
+    text: `${lines.join("\n\n")}\n\n${input.resetLink}\n`,
+    html: layout(lines, { label: "Change my password", href: input.resetLink }),
+  };
+}

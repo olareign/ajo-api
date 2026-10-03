@@ -55,6 +55,12 @@ const schema = z
     /** Bot protection on sign-up. `turnstile` is Cloudflare Turnstile and needs its secret key. */
     BOT_CHECK: z.enum(["fake", "turnstile"]).default("fake"),
     TURNSTILE_SECRET_KEY: z.string().min(1).optional(),
+    /**
+     * Shared with the web app's server. When set, the person's own address and device that the web
+     * server reports (proved by this secret) are used for rate limits, sessions and sign-in alerts.
+     * Unset, they are ignored. At least 32 characters; generate with: openssl rand -base64 48
+     */
+    BFF_SHARED_SECRET: z.string().min(32).optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */

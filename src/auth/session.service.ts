@@ -1,6 +1,7 @@
 import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { sql } from "../database/sql.js";
+import { DevicesService, type DeviceSighting } from "../identity/devices.service.js";
 import { EmailVerification } from "../identity/email-verification.service.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
@@ -11,6 +12,13 @@ export const MAX_FAILED_LOGINS = 10;
 export const LOCKOUT_MINUTES = 15;
 export const SESSION_MAX_DAYS = 30;
 export const REFRESH_IDLE_DAYS = 7;
+/**
+ * A refresh token that was spent this recently is still accepted once more. Two requests made at the
+ * same moment on an expired access token (a page loading its data) each present the same token, and
+ * the second would otherwise look like theft and end the session. After the window a replay still
+ * does, which is how a copied token is caught.
+ */
+export const REFRESH_REUSE_GRACE_SECONDS = 10;
 /** Sign-ins beyond this many at once end the oldest, so sessions cannot pile up without limit. */
 export const MAX_ACTIVE_SESSIONS = 10;
 /** Sent with the refusal so the app can send the person to "check your email". */
@@ -49,6 +57,7 @@ export class SessionService {
     private readonly verification: EmailVerification,
     @Inject(AccessTokens) private readonly accessTokens: AccessTokens,
     private readonly mfa: MfaService,
+    private readonly devices: DevicesService,
   ) {}
 
   async login(email: string, password: string, client: ClientContext): Promise<LoginResult> {
@@ -92,8 +101,8 @@ export class SessionService {
       if (await this.mfa.isEnabled(tx, user.id)) {
         return { kind: "mfa", token: await this.mfa.createChallenge(tx, user.id) } as const;
       }
-      const { sessionId, refreshToken } = await this.createSession(tx, user.id, client);
-      return { kind: "ok", userId: user.id, sessionId, refreshToken } as const;
+      const { sessionId, refreshToken, device } = await this.createSession(tx, user.id, client);
+      return { kind: "ok", userId: user.id, sessionId, refreshToken, device } as const;
     });
 
     if (outcome.kind === "bad_credentials") throw new UnauthorizedException(BAD_CREDENTIALS);
@@ -107,6 +116,7 @@ export class SessionService {
       });
     }
     if (outcome.kind === "mfa") return { mfaRequired: true, mfaToken: outcome.token };
+    void this.devices.alert(outcome.userId, outcome.device);
     return this.tokenPair(outcome.userId, outcome.sessionId, outcome.refreshToken);
   }
 
@@ -118,6 +128,7 @@ export class SessionService {
   ): Promise<TokenPair> {
     const userId = await this.mfa.completeChallenge(mfaToken, input);
     const created = await this.db.transaction((tx) => this.createSession(tx, userId, client));
+    void this.devices.alert(userId, created.device);
     return this.tokenPair(userId, created.sessionId, created.refreshToken);
   }
 
@@ -132,19 +143,21 @@ export class SessionService {
         session_id: string;
         user_id: string;
         used: boolean;
+        recently_used: boolean;
         valid: boolean;
       }>(
         tx,
         `SELECT rt.id, rt.session_id, s.user_id, rt.used_at IS NOT NULL AS used,
+                coalesce(rt.used_at > now() - make_interval(secs => $2), false) AS recently_used,
                 (rt.expires_at > now() AND s.revoked_at IS NULL AND s.expires_at > now()) AS valid
            FROM refresh_tokens rt
            JOIN sessions s ON s.id = rt.session_id
           WHERE rt.token_hash = $1
           FOR UPDATE OF rt, s`,
-        [hashToken(refreshToken)],
+        [hashToken(refreshToken), REFRESH_REUSE_GRACE_SECONDS],
       );
       if (!row) return { kind: "invalid" } as const;
-      if (row.used) {
+      if (row.used && !row.recently_used) {
         await sql(
           tx,
           `UPDATE sessions SET revoked_at = coalesce(revoked_at, now()), revoked_reason = coalesce(revoked_reason, 'refresh_reuse')
@@ -155,7 +168,9 @@ export class SessionService {
       }
       if (!row.valid) return { kind: "invalid" } as const;
 
-      await sql(tx, `UPDATE refresh_tokens SET used_at = now() WHERE id = $1`, [row.id]);
+      // First use spends the token; a second use inside the window leaves its first spending time alone.
+      if (!row.used)
+        await sql(tx, `UPDATE refresh_tokens SET used_at = now() WHERE id = $1`, [row.id]);
       await sql(tx, `UPDATE sessions SET last_seen_at = now() WHERE id = $1`, [row.session_id]);
       const next = await this.issueRefreshToken(tx, row.session_id);
       return {
@@ -199,7 +214,7 @@ export class SessionService {
     tx: Parameters<typeof sql>[0],
     userId: string,
     client: ClientContext,
-  ): Promise<{ sessionId: string; refreshToken: string }> {
+  ): Promise<{ sessionId: string; refreshToken: string; device: DeviceSighting & { id: string } }> {
     const [session] = await sql<{ id: string }>(
       tx,
       `INSERT INTO sessions (user_id, expires_at, ip, user_agent)
@@ -215,7 +230,12 @@ export class SessionService {
                       ORDER BY created_at DESC, id DESC OFFSET $2)`,
       [userId, MAX_ACTIVE_SESSIONS],
     );
-    return { sessionId: session!.id, refreshToken: await this.issueRefreshToken(tx, session!.id) };
+    const device = await this.devices.record(tx, userId, client.userAgent, client.ip);
+    return {
+      sessionId: session!.id,
+      refreshToken: await this.issueRefreshToken(tx, session!.id),
+      device,
+    };
   }
 
   private async issueRefreshToken(

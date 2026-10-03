@@ -330,6 +330,20 @@ BEGIN
   END IF;
 END $do$;
 
+-- 1790900060000 AddLoginDevices -------------------------------------------------------------
+-- The kinds of device each person has signed in from, so a new kind can be pointed out by email.
+CREATE TABLE IF NOT EXISTS login_devices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  device_key char(64) NOT NULL,
+  label text NOT NULL CHECK (char_length(label) <= 100),
+  first_seen_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  last_ip inet,
+  alerted_at timestamptz,
+  UNIQUE (user_id, device_key)
+);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -350,14 +364,15 @@ SELECT v.ts, v.name
     (1790900030000::bigint, 'CreateOnboarding1790900030000'),
     (1790900040000::bigint, 'AddEmailVerified1790900040000'),
     (1790900041000::bigint, 'AddRetentionSupport1790900041000'),
-    (1790900050000::bigint, 'AddUsername1790900050000')
+    (1790900050000::bigint, 'AddUsername1790900050000'),
+    (1790900060000::bigint, 'AddLoginDevices1790900060000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all ten migrations must be listed.
+-- `username` must be there (citext, nullable); and all eleven migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')
