@@ -16,7 +16,9 @@ import type { AccessClaims } from "../auth/access-tokens.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { IdempotencyKey } from "./idempotency-key.decorator.js";
 import { MoneyRoute } from "./money-route.decorator.js";
+import { NG_BANKS } from "./banks.js";
 import {
+  BanksResponse,
   FundDto,
   MandateResponse,
   PayoutAccountDto,
@@ -96,6 +98,17 @@ export class PaymentsController {
   @ApiOkResponse({ type: MandateResponse })
   cancelMandate(@CurrentUser() auth: AccessClaims): Promise<MandateResponse> {
     return this.mandates.cancel(auth.userId);
+  }
+
+  /** The banks a withdrawal can go to, for the person to pick from. */
+  @Get("banks")
+  @ApiOkResponse({ type: BanksResponse })
+  banks(): BanksResponse {
+    return {
+      banks: Object.entries(NG_BANKS)
+        .map(([code, name]) => ({ code, name }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    };
   }
 
   /** Where withdrawals go, if the person has chosen. */

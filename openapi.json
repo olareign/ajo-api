@@ -1026,6 +1026,32 @@
         ]
       }
     },
+    "/api/v1/payments/banks": {
+      "get": {
+        "operationId": "PaymentsController_banks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BanksResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/payments/payout-account": {
       "get": {
         "operationId": "PaymentsController_payoutAccount",
@@ -1954,6 +1980,37 @@
           "status",
           "action",
           "createdAt"
+        ]
+      },
+      "BankResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "058"
+          },
+          "name": {
+            "type": "string",
+            "example": "GTBank"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "BanksResponse": {
+        "type": "object",
+        "properties": {
+          "banks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BankResponse"
+            }
+          }
+        },
+        "required": [
+          "banks"
         ]
       },
       "PayoutAccountResponse": {

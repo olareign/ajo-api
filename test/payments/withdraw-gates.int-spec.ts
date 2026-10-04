@@ -109,4 +109,16 @@ describe("the gates in front of taking money out", () => {
       .expect(401);
     await request(t.http()).put("/api/v1/payments/payout-account").send({}).expect(401);
   });
+
+  it("lists the banks a person can pick from, by name, to anyone signed in and to no one else", async () => {
+    const { default: request } = await import("supertest");
+    const who = await t.person();
+    const signedIn = await t.ready("NG", { mfa: false, kyc: false });
+    const res = await signedIn.call("get", "/payments/banks").expect(200);
+    expect(res.body.banks).toContainEqual({ code: "058", name: "GTBank" });
+    const names = res.body.banks.map((b: { name: string }) => b.name);
+    expect(names).toEqual([...names].sort((a: string, b: string) => a.localeCompare(b)));
+    expect(who.id).toBeTruthy();
+    await request(t.http()).get("/api/v1/payments/banks").expect(401);
+  });
 });

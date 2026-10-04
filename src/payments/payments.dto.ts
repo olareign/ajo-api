@@ -69,6 +69,15 @@ export class PayoutAccountResponse {
   @ApiProperty({ description: "The name the bank holds the account under" }) accountName!: string;
 }
 
+export class BankResponse {
+  @ApiProperty({ example: "058" }) code!: string;
+  @ApiProperty({ example: "GTBank" }) name!: string;
+}
+
+export class BanksResponse {
+  @ApiProperty({ type: [BankResponse] }) banks!: BankResponse[];
+}
+
 export class MandateResponse {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: ["pending", "active", "cancelled", "failed"] }) status!: string;
