@@ -68,3 +68,15 @@ export class PayoutAccountResponse {
   @ApiProperty({ description: "The last four digits, for recognising it" }) last4!: string;
   @ApiProperty({ description: "The name the bank holds the account under" }) accountName!: string;
 }
+
+export class MandateResponse {
+  @ApiProperty() id!: string;
+  @ApiProperty({ enum: ["pending", "active", "cancelled", "failed"] }) status!: string;
+  @ApiProperty({
+    type: ActionResponse,
+    nullable: true,
+    description: "Where the person goes to give their permission",
+  })
+  action!: ActionResponse | null;
+  @ApiProperty() createdAt!: string;
+}

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -17,12 +18,14 @@ import { IdempotencyKey } from "./idempotency-key.decorator.js";
 import { MoneyRoute } from "./money-route.decorator.js";
 import {
   FundDto,
+  MandateResponse,
   PayoutAccountDto,
   PayoutAccountResponse,
   PaymentResponse,
   WithdrawDto,
 } from "./payments.dto.js";
 import { PayoutAccounts } from "./payout-accounts.service.js";
+import { Mandates } from "./mandates.service.js";
 import { Withdrawals } from "./withdrawals.service.js";
 import { PaymentsService } from "./payments.service.js";
 
@@ -36,6 +39,7 @@ export class PaymentsController {
     private readonly payments: PaymentsService,
     private readonly withdrawals: Withdrawals,
     private readonly accounts: PayoutAccounts,
+    private readonly mandates: Mandates,
   ) {}
 
   /** Starts adding money. Repeat it with the same Idempotency-Key and nothing is done twice. */
@@ -67,6 +71,31 @@ export class PaymentsController {
     @IdempotencyKey() key: string,
   ): Promise<PaymentResponse> {
     return this.withdrawals.start(auth.userId, body, key);
+  }
+
+  /** The person's auto-debit: the open one, or the latest that ended. Null when they never had one. */
+  @Get("mandate")
+  @ApiOkResponse({ type: MandateResponse, description: "Null when none was ever started" })
+  mandate(@CurrentUser() auth: AccessClaims): Promise<MandateResponse | null> {
+    return this.mandates.current(auth.userId);
+  }
+
+  /** Starts auto-debit, or returns the one already open. */
+  @Post("mandate")
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
+  @MoneyRoute({ code: false })
+  @ApiOkResponse({ type: MandateResponse })
+  createMandate(@CurrentUser() auth: AccessClaims): Promise<MandateResponse> {
+    return this.mandates.create(auth.userId);
+  }
+
+  /** Cancels auto-debit, unless a saving plan or circle still depends on it. */
+  @Delete("mandate")
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
+  @ApiOkResponse({ type: MandateResponse })
+  cancelMandate(@CurrentUser() auth: AccessClaims): Promise<MandateResponse> {
+    return this.mandates.cancel(auth.userId);
   }
 
   /** Where withdrawals go, if the person has chosen. */

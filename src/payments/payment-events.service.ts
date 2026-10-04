@@ -265,7 +265,11 @@ export class PaymentEvents {
 
   // ---- standing permission to collect ------------------------------------------------------------
 
-  private async findMandate(tx: Tx, event: ProviderEvent): Promise<MandateRow | undefined> {
+  private async findMandate(
+    tx: Tx,
+    provider: ProviderName,
+    event: ProviderEvent,
+  ): Promise<MandateRow | undefined> {
     const lock = `FOR UPDATE`;
     if (event.reference) {
       const [row] = await sql<MandateRow>(
@@ -292,13 +296,14 @@ export class PaymentEvents {
       if (row) return row;
     }
     if (event.customerEmail) {
-      // Paystack names the customer, not our reference: the person's one open mandate is the one.
+      // Some partners (Paystack) name the customer, not our reference: the person's one open mandate
+      // with that partner is the one.
       const [row] = await sql<MandateRow>(
         tx,
         `SELECT m.id, m.user_id, m.status FROM mandates m JOIN users u ON u.id = m.user_id
-          WHERE u.email = $1 AND m.provider = 'paystack' AND m.status IN ('pending', 'active')
+          WHERE u.email = $1 AND m.provider = $2 AND m.status IN ('pending', 'active')
           ORDER BY m.created_at DESC LIMIT 1 FOR UPDATE OF m`,
-        [event.customerEmail],
+        [event.customerEmail, provider],
       );
       return row;
     }
@@ -307,10 +312,10 @@ export class PaymentEvents {
 
   private async mandateChanged(
     tx: Tx,
-    _provider: ProviderName,
+    provider: ProviderName,
     event: ProviderEvent,
   ): Promise<Applied> {
-    const mandate = await this.findMandate(tx, event);
+    const mandate = await this.findMandate(tx, provider, event);
     if (!mandate) return ignored("No mandate of ours matches.");
     const ids = [event.mandateId ?? null, event.authorizationCode ?? null];
     const remember = async () =>

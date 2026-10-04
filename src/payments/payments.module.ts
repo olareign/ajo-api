@@ -4,6 +4,8 @@ import { IdentityModule } from "../identity/identity.module.js";
 import { KycModule } from "../kyc/kyc.module.js";
 import { LedgerModule } from "../ledger/ledger.module.js";
 import { PaymentsController } from "./payments.controller.js";
+import { ActiveCommitments } from "./commitments.js";
+import { Mandates } from "./mandates.service.js";
 import { PaymentContext } from "./payment-context.js";
 import { PaymentsService } from "./payments.service.js";
 import { PayoutAccounts } from "./payout-accounts.service.js";
@@ -25,6 +27,8 @@ import { WebhooksController } from "./webhooks.controller.js";
     PaymentsService,
     PayoutAccounts,
     Withdrawals,
+    Mandates,
+    ActiveCommitments,
   ],
   exports: [PaymentProviders, PaymentEvents, WebhookInbox, PaymentsService],
 })

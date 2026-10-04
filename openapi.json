@@ -946,6 +946,86 @@
         ]
       }
     },
+    "/api/v1/payments/mandate": {
+      "get": {
+        "operationId": "PaymentsController_mandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Null when none was ever started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "post": {
+        "operationId": "PaymentsController_createMandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "delete": {
+        "operationId": "PaymentsController_cancelMandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/payments/payout-account": {
       "get": {
         "operationId": "PaymentsController_payoutAccount",
@@ -1838,6 +1918,42 @@
         "required": [
           "amount",
           "pin"
+        ]
+      },
+      "MandateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "action": {
+            "nullable": true,
+            "description": "Where the person goes to give their permission",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActionResponse"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "action",
+          "createdAt"
         ]
       },
       "PayoutAccountResponse": {
