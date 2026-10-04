@@ -102,8 +102,13 @@ export interface PaymentProvider {
 
   /** Throws InvalidWebhookSignature unless the signature is right for exactly these bytes. */
   parseWebhook(rawBody: Buffer, signature: string | undefined): ProviderEvent[];
-  /** For partners whose events do not carry our reference: look it up (GoCardless payments). */
-  lookupReference?(event: ProviderEvent): Promise<string | null>;
+  /**
+   * For partners whose events do not say which of our payments or mandates they are about, or how
+   * much (GoCardless): ask the partner, and fill in what it says. Null when it cannot tell.
+   */
+  lookupEvent?(
+    event: ProviderEvent,
+  ): Promise<Partial<Pick<ProviderEvent, "reference" | "amount" | "currency">> | null>;
 
   createMandate(input: {
     reference: string;

@@ -13,7 +13,9 @@ type Tx = Parameters<typeof sql>[0];
 export type Applied =
   | Readonly<{ result: "applied" }>
   | Readonly<{ result: "ignored"; note: string }>
-  | Readonly<{ result: "attention"; note: string }>;
+  | Readonly<{ result: "attention"; note: string }>
+  /** Not matched to anything yet (its other half may still be on the way): try again later. */
+  | Readonly<{ result: "retry"; note: string }>;
 
 type Intent = {
   id: string;
@@ -316,7 +318,13 @@ export class PaymentEvents {
     event: ProviderEvent,
   ): Promise<Applied> {
     const mandate = await this.findMandate(tx, provider, event);
-    if (!mandate) return ignored("No mandate of ours matches.");
+    if (!mandate) {
+      // Naming the customer, or one of our own references, is enough to know it is not ours. A partner's own id for a mandate we have
+      // not been told about yet may simply have arrived ahead of the message that introduces it.
+      return event.customerEmail || event.reference
+        ? ignored("No mandate of ours matches.")
+        : { result: "retry", note: "No mandate of ours matches yet." };
+    }
     const ids = [event.mandateId ?? null, event.authorizationCode ?? null];
     const remember = async () =>
       sql(

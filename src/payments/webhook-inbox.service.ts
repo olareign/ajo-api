@@ -77,10 +77,10 @@ export class WebhookInbox {
 
     let event = row.payload;
     try {
-      // Some partners' events do not say which payment they are about: ask, before taking any lock.
-      if (!event.reference && provider.lookupReference && isAboutAPayment(event)) {
-        const reference = await provider.lookupReference(event);
-        if (reference) event = { ...event, reference };
+      // Some partners' events do not say which payment or mandate they are about: ask, before taking any lock.
+      if (!event.reference && provider.lookupEvent && needsLookup(event)) {
+        const found = await provider.lookupEvent(event);
+        if (found) event = { ...event, ...found };
       }
       await this.db.transaction(async (tx) => {
         const [locked] = await sql<{ id: string }>(
@@ -101,7 +101,7 @@ export class WebhookInbox {
             id,
             statusOf(outcome),
             outcome.result === "applied" ? null : outcome.note.slice(0, 500),
-            outcome.result === "attention",
+            stopsRetrying(outcome),
             NEEDS_A_PERSON,
           ],
         );
@@ -125,10 +125,15 @@ export class WebhookInbox {
   }
 }
 
-const isAboutAPayment = (event: ProviderEvent) =>
-  event.kind === "funding.succeeded" || event.kind === "funding.failed";
+// A mandate message that names the request we started is matched from our own records, so a
+// partner outage cannot hold it up; only one that carries the partner's own id alone has to ask.
+const needsLookup = (event: ProviderEvent) =>
+  event.kind.startsWith("funding.") ||
+  (event.kind.startsWith("mandate.") && !event.billingRequestId);
 
 function statusOf(outcome: Applied): "processed" | "ignored" | "failed" {
   if (outcome.result === "applied") return "processed";
   return outcome.result === "ignored" ? "ignored" : "failed";
 }
+
+const stopsRetrying = (outcome: Applied) => outcome.result === "attention";
