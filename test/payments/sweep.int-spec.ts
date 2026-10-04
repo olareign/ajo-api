@@ -1,27 +1,23 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import type { Redis } from "ioredis";
-import { PaymentSweep } from "../../src/payments/payment-sweep.service.js";
+import { Scheduler } from "../../src/scheduler/scheduler.service.js";
 import { WebhookInbox } from "../../src/payments/webhook-inbox.service.js";
-import { REDIS_CLIENT } from "../../src/redis/redis.module.js";
 import { createTestApp } from "../support/test-app.js";
 import { paymentsHarness } from "./support.js";
 
 let app: NestExpressApplication;
 let t: ReturnType<typeof paymentsHarness>;
-let sweep: PaymentSweep;
-let redis: Redis;
+let scheduler: Scheduler;
 
 beforeAll(async () => {
   app = await createTestApp({ PAYMENTS_FAKE: "true" });
   t = paymentsHarness(app);
-  sweep = app.get(PaymentSweep);
-  redis = app.get(REDIS_CLIENT);
+  scheduler = app.get(Scheduler);
 });
 afterAll(async () => {
   await app?.close();
 });
 beforeEach(async () => {
-  await redis.del("payments:sweep");
+  await scheduler.release();
 });
 afterEach(async () => t.expectBooksBalance());
 
@@ -31,7 +27,7 @@ const makeStale = (id: string) =>
     [id],
   );
 
-describe("the payment sweep", () => {
+describe("the scheduled sweep of payments", () => {
   it("settles a payment the partner confirmed but whose webhook never came, once, however many sweeps race", async () => {
     const who = await t.person();
     const funding = await t.seedFunding(who.id, "300000");
@@ -44,12 +40,12 @@ describe("the payment sweep", () => {
 
     // Several copies of the API ticking at once: the lock lets one through, and the claims in the
     // database make a second pass harmless even if the lock were lost.
-    const passes = await Promise.all(Array.from({ length: 6 }, () => sweep.run()));
+    const passes = await Promise.all(Array.from({ length: 6 }, () => scheduler.run()));
     expect(passes.filter(Boolean)).toHaveLength(1);
     expect(await t.balance(who.id)).toBe("300000");
 
-    await redis.del("payments:sweep");
-    await Promise.all(Array.from({ length: 4 }, () => sweep.run()));
+    await scheduler.release();
+    await Promise.all(Array.from({ length: 4 }, () => scheduler.run()));
     expect(await t.balance(who.id)).toBe("300000");
     expect(await t.postings(`funding:${funding.id}`)).toHaveLength(1);
   });
@@ -62,7 +58,7 @@ describe("the payment sweep", () => {
       amount: "100000",
       currency: "NGN",
     });
-    await sweep.run();
+    await scheduler.run();
     expect(await t.balance(who.id)).toBe("0");
     expect((await t.intent(funding.id)).status).toBe("pending");
   });
@@ -81,17 +77,20 @@ describe("the payment sweep", () => {
        VALUES ('fake', $1, $2, $3, $4, 'failed', 1, 'The partner was not reachable.')`,
       [held.eventId, held.kind, held.type, JSON.stringify(held)],
     );
-    await sweep.run();
+    await scheduler.run();
     expect(await t.balance(who.id)).toBe("200000");
     expect((await t.inbox(held.eventId))[0].status).toBe("processed");
   });
 
-  it("does not let a failing pass stop the next one", async () => {
+  it("does not let a failing task stop the next one, or the next pass", async () => {
+    const ran: string[] = [];
+    scheduler.register({ name: "boom", run: () => Promise.reject(new Error("boom")) });
+    scheduler.register({ name: "after", run: async () => void ran.push("after") });
     const drain = vi.spyOn(app.get(WebhookInbox), "drain").mockRejectedValueOnce(new Error("boom"));
-    expect(await sweep.run()).toBe(true);
-    expect(drain).toHaveBeenCalledTimes(1);
-    await redis.del("payments:sweep");
-    expect(await sweep.run()).toBe(true);
+    expect(await scheduler.run()).toBe(true);
+    expect(ran).toEqual(["after"]);
+    await scheduler.release();
+    expect(await scheduler.run()).toBe(true);
     expect(drain).toHaveBeenCalledTimes(2);
     drain.mockRestore();
   });

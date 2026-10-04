@@ -10,7 +10,7 @@ import { PaymentContext } from "./payment-context.js";
 import { PaymentsService } from "./payments.service.js";
 import { PayoutAccounts } from "./payout-accounts.service.js";
 import { Withdrawals } from "./withdrawals.service.js";
-import { PaymentSweep } from "./payment-sweep.service.js";
+import { PaymentsSweep } from "./payments-sweep.js";
 import { PaymentEvents } from "./payment-events.service.js";
 import { HTTP_FETCH, PaymentProviders } from "./providers/providers.service.js";
 import { WebhookInbox } from "./webhook-inbox.service.js";
@@ -26,12 +26,12 @@ import { WebhooksController } from "./webhooks.controller.js";
     WebhookInbox,
     PaymentContext,
     PaymentsService,
-    PaymentSweep,
+    PaymentsSweep,
     PayoutAccounts,
     Withdrawals,
     Mandates,
     ActiveCommitments,
   ],
-  exports: [PaymentProviders, PaymentEvents, WebhookInbox, PaymentsService, PaymentSweep],
+  exports: [PaymentProviders, PaymentEvents, WebhookInbox, PaymentsService],
 })
 export class PaymentsModule {}
