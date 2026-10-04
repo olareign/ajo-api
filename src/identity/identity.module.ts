@@ -8,6 +8,7 @@ import { PasswordResetController } from "./password-reset.controller.js";
 import { PasswordResetService } from "./password-reset.service.js";
 import { SignUpController } from "./sign-up.controller.js";
 import { SignUpService } from "./sign-up.service.js";
+import { TrustedDevicesService } from "./trusted-devices.service.js";
 import { UsernameService } from "./username.service.js";
 
 @Module({
@@ -20,7 +21,8 @@ import { UsernameService } from "./username.service.js";
     PinService,
     UsernameService,
     DevicesService,
+    TrustedDevicesService,
   ],
-  exports: [PasswordHasher, EmailVerification, DevicesService],
+  exports: [PasswordHasher, EmailVerification, DevicesService, TrustedDevicesService],
 })
 export class IdentityModule {}

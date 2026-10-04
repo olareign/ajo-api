@@ -10,6 +10,7 @@ import { DataSource } from "typeorm";
 import { FieldEncryption } from "../crypto/field-encryption.js";
 import { sql } from "../database/sql.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
+import { TrustedDevicesService } from "../identity/trusted-devices.service.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { generateRecoveryCodes, hashRecoveryCode } from "./recovery-codes.js";
 import { Totp } from "./totp.js";
@@ -33,6 +34,7 @@ export class MfaService {
     private readonly hasher: PasswordHasher,
     @Inject(FieldEncryption) private readonly encryption: FieldEncryption,
     @Inject(Totp) private readonly totp: Totp,
+    private readonly trusted: TrustedDevicesService,
   ) {}
 
   private context(userId: string): string {
@@ -66,9 +68,18 @@ export class MfaService {
     return { secret, otpauthUri: uri };
   }
 
-  /** Turns the second factor on and returns the recovery codes, which are never shown again. */
-  async confirm(userId: string, code: string): Promise<string[]> {
+  /**
+   * Turns the second factor on and returns the recovery codes, which are never shown again, and the
+   * secret of the device that just proved it has the app: that phone is remembered, so the next
+   * sign-in on it does not ask straight away.
+   */
+  async confirm(
+    userId: string,
+    code: string,
+    userAgent: string | undefined,
+  ): Promise<{ recoveryCodes: string[]; deviceToken: string }> {
     const codes = generateRecoveryCodes();
+    let deviceToken = "";
     const outcome = await this.db.transaction(async (tx) => {
       const [row] = await sql<{ totp_secret: string; confirmed_at: Date | null }>(
         tx,
@@ -96,6 +107,7 @@ export class MfaService {
           hashRecoveryCode(recoveryCode),
         ]);
       }
+      deviceToken = await this.trusted.remember(tx, userId, userAgent);
       return "ok" as const;
     });
     if (outcome === "already")
@@ -104,7 +116,7 @@ export class MfaService {
       throw new BadRequestException("Start setting up the authenticator app again.");
     }
     if (outcome === "wrong") throw new BadRequestException(WRONG_CODE);
-    return codes;
+    return { recoveryCodes: codes, deviceToken };
   }
 
   /** Turning it off needs the password and a current code, so a stolen session alone cannot do it. */
@@ -131,6 +143,7 @@ export class MfaService {
       );
       if (!check.ok) return "wrong_code" as const;
       await sql(tx, `DELETE FROM mfa_challenges WHERE user_id = $1`, [userId]);
+      await this.trusted.forgetAllIn(tx, userId);
       await sql(tx, `DELETE FROM mfa_recovery_codes WHERE user_id = $1`, [userId]);
       await sql(tx, `DELETE FROM user_mfa WHERE user_id = $1`, [userId]);
       return "ok" as const;

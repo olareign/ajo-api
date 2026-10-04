@@ -8,6 +8,7 @@ import { AddEmailVerified1790900040000 } from "./1790900040000-add-email-verifie
 import { AddRetentionSupport1790900041000 } from "./1790900041000-add-retention-support.js";
 import { AddUsername1790900050000 } from "./1790900050000-add-username.js";
 import { AddLoginDevices1790900060000 } from "./1790900060000-add-login-devices.js";
+import { AddTrustedDevices1790900070000 } from "./1790900070000-add-trusted-devices.js";
 import { CreatePasswordResetTokens1790900010000 } from "./1790900010000-create-password-reset-tokens.js";
 
 /** Every migration, in order. Listed explicitly so builds and ESM loading never miss one. */
@@ -23,4 +24,5 @@ export const migrations = [
   AddRetentionSupport1790900041000,
   AddUsername1790900050000,
   AddLoginDevices1790900060000,
+  AddTrustedDevices1790900070000,
 ];

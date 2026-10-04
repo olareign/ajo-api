@@ -10,11 +10,15 @@ import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { passwordChangedEmail, passwordResetEmail } from "./emails.js";
 import { PasswordHasher } from "./password-hasher.js";
+import { TrustedDevicesService } from "./trusted-devices.service.js";
 import { checkPassword } from "./password-policy.js";
 import { INVALID_LINK } from "./sign-up.service.js";
 import { createOneTimeToken, hashToken } from "./tokens.js";
 
 export const RESET_TTL_MINUTES = 60;
+/** At most one reset link a minute, and this many a day, for one address. */
+export const RESET_COOLDOWN_SECONDS = 60;
+export const MAX_RESET_EMAILS_PER_DAY = 5;
 
 @Injectable()
 export class PasswordResetService {
@@ -23,6 +27,7 @@ export class PasswordResetService {
   constructor(
     private readonly db: DataSource,
     private readonly hasher: PasswordHasher,
+    private readonly trusted: TrustedDevicesService,
     @Inject(BREACHED_PASSWORDS) private readonly breached: BreachedPasswords,
     @Inject(MAILER) private readonly mailer: Mailer,
     @Inject(ENV) private readonly env: Env,
@@ -31,18 +36,29 @@ export class PasswordResetService {
   /**
    * Emails a reset link if the address has an account. The caller answers the same either way, and
    * the email is sent without waiting, so neither the response nor its timing reveals who has one.
-   * A new request cancels any earlier link.
+   * A new request cancels any earlier link. One address gets one link a minute and five a day, so a
+   * stranger cannot flood someone's inbox; a refused request cancels nothing and answers the same.
    */
   async request(email: string): Promise<void> {
     const { token, hash } = createOneTimeToken();
     const user = await this.db.transaction(async (tx) => {
+      // The row lock makes two requests at once queue, so both cannot pass the limit below.
       const rows = await sql<{ id: string; display_name: string }>(
         tx,
-        `SELECT id, display_name FROM users WHERE email = $1`,
+        `SELECT id, display_name FROM users WHERE email = $1 FOR UPDATE`,
         [email],
       );
       const found = rows[0];
       if (!found) return null;
+      const [counts] = await sql<{ recent: number; today: number }>(
+        tx,
+        `SELECT count(*) FILTER (WHERE created_at > now() - make_interval(secs => $2))::int AS recent,
+                count(*)::int AS today
+           FROM password_reset_tokens
+          WHERE user_id = $1 AND created_at > now() - interval '24 hours'`,
+        [found.id, RESET_COOLDOWN_SECONDS],
+      );
+      if (!counts || counts.recent > 0 || counts.today >= MAX_RESET_EMAILS_PER_DAY) return null;
       await sql(
         tx,
         `UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`,
@@ -118,6 +134,8 @@ export class PasswordResetService {
           WHERE user_id = $1 AND revoked_at IS NULL`,
         [link.user_id],
       );
+      // A new password means the old one may have been known to someone: no device stays trusted.
+      await this.trusted.forgetAllIn(tx, link.user_id);
       await sql(
         tx,
         `UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`,

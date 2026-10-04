@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, HttpStatus, Post, Req } from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -7,6 +7,7 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
+import type { Request } from "express";
 import { DataSource } from "typeorm";
 import type { AccessClaims } from "./access-tokens.js";
 import {
@@ -50,8 +51,9 @@ export class MfaController {
   async confirm(
     @CurrentUser() auth: AccessClaims,
     @Body() body: ConfirmMfaDto,
+    @Req() req: Request,
   ): Promise<RecoveryCodesResponse> {
-    return { recoveryCodes: await this.mfa.confirm(auth.userId, body.code) };
+    return this.mfa.confirm(auth.userId, body.code, req.header("user-agent"));
   }
 
   @Delete()

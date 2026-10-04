@@ -28,7 +28,7 @@ import {
 } from "./auth.dto.js";
 import { CurrentUser } from "./current-user.decorator.js";
 import { Public } from "./public.decorator.js";
-import { SessionService, type LoginResult } from "./session.service.js";
+import { SessionService, type LoginResult, type MfaLoginResult } from "./session.service.js";
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
@@ -57,10 +57,12 @@ export class AuthController {
       'The password is right but the email is not confirmed yet (`code: "email_not_verified"`). A new confirmation link has been emailed, within the usual limits.',
   })
   login(@Body() body: LoginDto, @Req() req: Request): Promise<LoginResult> {
-    return this.sessions.login(body.email, body.password, {
-      ip: req.ip,
-      userAgent: req.header("user-agent"),
-    });
+    return this.sessions.login(
+      body.email,
+      body.password,
+      { ip: req.ip, userAgent: req.header("user-agent") },
+      body.deviceToken,
+    );
   }
 
   @Public()
@@ -68,7 +70,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: FIFTEEN_MINUTES } })
   @ApiOkResponse({ type: TokenPairResponse })
-  loginMfa(@Body() body: LoginMfaDto, @Req() req: Request): Promise<TokenPairResponse> {
+  loginMfa(@Body() body: LoginMfaDto, @Req() req: Request): Promise<MfaLoginResult> {
     if ((body.code === undefined) === (body.recoveryCode === undefined)) {
       throw new BadRequestException("Send either a code or a recovery code.");
     }
@@ -76,6 +78,7 @@ export class AuthController {
       body.mfaToken,
       { code: body.code, recoveryCode: body.recoveryCode },
       { ip: req.ip, userAgent: req.header("user-agent") },
+      body.trustDevice === true,
     );
   }
 

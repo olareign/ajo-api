@@ -131,6 +131,24 @@ describe("RetentionService.purge", () => {
     }
   });
 
+  it("removes remembered devices a day after they expire, and keeps live ones", async () => {
+    const userId = await newUserId();
+    const insert = (daysFromNow: number) =>
+      db.query(
+        `INSERT INTO trusted_devices (user_id, token_hash, label, expires_at)
+         VALUES ($1, $2, 'Chrome on Android', now() + make_interval(days => $3)) RETURNING id`,
+        [userId, hash(), daysFromNow],
+      );
+    const [[stale], [justExpired], [live]] = await Promise.all([insert(-3), insert(0), insert(20)]);
+    const report = await retention.purge();
+    expect(report.trustedDevices).toBeGreaterThanOrEqual(1);
+    const left = await db.query("SELECT id FROM trusted_devices WHERE user_id = $1", [userId]);
+    const ids = left.map((r: { id: string }) => r.id);
+    expect(ids).not.toContain(stale.id);
+    expect(ids).toContain(justExpired.id);
+    expect(ids).toContain(live.id);
+  });
+
   it("never touches accounts", async () => {
     const userId = await newUserId();
     await retention.purge();

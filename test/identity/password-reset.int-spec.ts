@@ -48,6 +48,15 @@ afterAll(async () => {
   await app?.close();
 });
 
+/** Pretends the last request was a few minutes ago, which is how long the per-address cooldown is. */
+async function waitOutCooldown(email: string, minutes = 5) {
+  await db.query(
+    `UPDATE password_reset_tokens SET created_at = created_at - make_interval(mins => $2)
+      WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
+    [email, minutes],
+  );
+}
+
 async function requestLink(email: string): Promise<string> {
   await forgot(email).expect(202);
   return tokenFrom(mailer.lastTo(email)!.text);
@@ -91,6 +100,7 @@ describe("POST /auth/password/forgot", () => {
     const { email } = await createVerifiedUser(app);
     const first = await requestLink(email);
     mailer.outbox.length = 0;
+    await waitOutCooldown(email);
     const second = await requestLink(email);
     expect(second).not.toBe(first);
     await reset(first, NEW_PASSWORD).expect(400);
@@ -179,5 +189,66 @@ describe("POST /auth/password/reset", () => {
     await reset(token, `${email}-extra`).expect(400);
     await reset(token, "password123456").expect(400);
     await reset(token, NEW_PASSWORD).expect(200);
+  });
+});
+
+describe("one inbox cannot be flooded", () => {
+  const same = {
+    message: "If that email has an account, we've sent a link to reset the password.",
+  };
+
+  it("sends one link a minute to an address, and answers every request the same way", async () => {
+    const { email } = await createVerifiedUser(app);
+    const first = await requestLink(email);
+    mailer.outbox.length = 0;
+
+    const again = await forgot(email).expect(202);
+    expect(again.body).toEqual(same);
+    expect(mailer.lastTo(email)).toBeUndefined();
+    // The link already sent keeps working: a refused request cancels nothing.
+    await reset(first, NEW_PASSWORD).expect(200);
+  });
+
+  it("sends again once the minute has passed", async () => {
+    const { email } = await createVerifiedUser(app);
+    await requestLink(email);
+    mailer.outbox.length = 0;
+    await waitOutCooldown(email, 2);
+    await forgot(email).expect(202);
+    expect(mailer.lastTo(email)).toBeDefined();
+  });
+
+  it("stops at five a day, and starts again after a day", async () => {
+    const { email } = await createVerifiedUser(app);
+    for (let i = 0; i < 5; i++) {
+      await requestLink(email);
+      await waitOutCooldown(email, 2);
+    }
+    mailer.outbox.length = 0;
+    const res = await forgot(email).expect(202);
+    expect(res.body).toEqual(same);
+    expect(mailer.lastTo(email)).toBeUndefined();
+
+    await db.query(
+      `UPDATE password_reset_tokens SET created_at = now() - interval '25 hours'
+        WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
+      [email],
+    );
+    await forgot(email).expect(202);
+    expect(mailer.lastTo(email)).toBeDefined();
+  });
+
+  it("lets only one of several simultaneous requests through", async () => {
+    const { email } = await createVerifiedUser(app);
+    await Promise.all(Array.from({ length: 4 }, () => forgot(email).expect(202)));
+    const sent = mailer.outbox.filter(
+      (m) => m.to === email && m.subject === "Reset your Àjọ password",
+    );
+    expect(sent).toHaveLength(1);
+  });
+
+  it("does not make an unknown address look different", async () => {
+    const res = await forgot(uniqueEmail()).expect(202);
+    expect(res.body).toEqual(same);
   });
 });

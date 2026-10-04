@@ -15,6 +15,8 @@ export const RETENTION = {
   expiredRefreshTokenDays: 1,
   /** Spent or expired one-time links and codes. */
   spentTokenDays: 7,
+  /** A day of slack after a remembered device expires, for clock differences. */
+  expiredTrustedDeviceDays: 1,
 } as const;
 
 export const PURGE_BATCH_SIZE = 1000;
@@ -24,7 +26,8 @@ export type PurgeReport = Record<
   | "sessions"
   | "emailVerificationTokens"
   | "passwordResetTokens"
-  | "mfaChallenges",
+  | "mfaChallenges"
+  | "trustedDevices",
   number
 >;
 
@@ -42,6 +45,11 @@ const TARGETS: readonly Target[] = [
     table: "sessions",
     where: `expires_at < now() - make_interval(days => ${RETENTION.expiredSessionDays})
          OR revoked_at < now() - make_interval(days => ${RETENTION.revokedSessionDays})`,
+  },
+  {
+    key: "trustedDevices",
+    table: "trusted_devices",
+    where: `expires_at < now() - make_interval(days => ${RETENTION.expiredTrustedDeviceDays})`,
   },
   ...(
     [
@@ -77,6 +85,7 @@ export class RetentionService {
       emailVerificationTokens: 0,
       passwordResetTokens: 0,
       mfaChallenges: 0,
+      trustedDevices: 0,
     };
     for (const target of TARGETS) {
       report[target.key] = await this.purgeTable(target, batchSize);
