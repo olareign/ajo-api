@@ -708,6 +708,32 @@ CREATE TABLE IF NOT EXISTS group_swaps (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS group_swaps_one_pending_idx ON group_swaps (group_id, from_user, to_user) WHERE status = 'pending';
 
+-- 1790900140000 AddKycOverride ---------------------------------------------------------------
+-- The owner can approve (or hold back) one person without the identity checks while those checks
+-- are pended. Every change is logged by the database itself, however it is made.
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS kyc_override text CHECK (kyc_override IN ('approved', 'denied'));
+CREATE TABLE IF NOT EXISTS kyc_override_log (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  previous_value text,
+  new_value text,
+  changed_by text NOT NULL,
+  changed_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS kyc_override_log_user_id_idx ON kyc_override_log (user_id);
+CREATE OR REPLACE FUNCTION log_kyc_override() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO kyc_override_log (user_id, previous_value, new_value, changed_by)
+  VALUES (NEW.id, OLD.kyc_override, NEW.kyc_override, current_user);
+  RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS users_log_kyc_override ON users;
+CREATE TRIGGER users_log_kyc_override
+  AFTER UPDATE OF kyc_override ON users
+  FOR EACH ROW WHEN (OLD.kyc_override IS DISTINCT FROM NEW.kyc_override)
+  EXECUTE FUNCTION log_kyc_override();
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -736,17 +762,18 @@ SELECT v.ts, v.name
     (1790900100000::bigint, 'CreateNotifications1790900100000'),
     (1790900110000::bigint, 'CreateSavings1790900110000'),
     (1790900120000::bigint, 'CreateFriends1790900120000'),
-    (1790900130000::bigint, 'CreateGroups1790900130000')
+    (1790900130000::bigint, 'CreateGroups1790900130000'),
+    (1790900140000::bigint, 'AddKycOverride1790900140000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all eighteen migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all nineteen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
- WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')
+ WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))
  ORDER BY column_name;
 
 SELECT count(*) AS migrations_recorded,

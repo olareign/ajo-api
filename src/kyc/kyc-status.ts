@@ -22,11 +22,23 @@ export type StepSummary = Readonly<{
   reason: string | null;
 }>;
 
+/**
+ * Where the answer comes from: the real checks, an approval given without them while they are
+ * pended (`waived`), or a hold the owner put on the account (`hold`).
+ */
+export type KycVia = "checks" | "waived" | "hold";
+
 export type KycSummary = Readonly<{
   status: KycStatus;
   tier: KycTier;
   steps: StepSummary[];
+  via: KycVia;
+  /** A sentence for the person when the answer is not from the checks; null otherwise. */
+  note: string | null;
 }>;
+
+/** Set by the owner on one account (`users.kyc_override`). */
+export type KycOverride = "approved" | "denied";
 
 const isRequired = (step: KycStep) => (REQUIRED_STEPS as readonly string[]).includes(step);
 
@@ -56,5 +68,29 @@ export function summarise(rows: readonly StepRow[]): KycSummary {
 
   const national = steps.find((s) => s.step === "national_check");
   const tier: KycTier = status !== "approved" ? 0 : national?.status === "approved" ? 2 : 1;
-  return { status, tier, steps };
+  return { status, tier, steps, via: "checks", note: null };
+}
+
+export const WAIVED_NOTE =
+  "Your account was approved without the identity checks, which are not switched on yet.";
+export const HOLD_NOTE = "Your verification is on hold. Please contact support.";
+
+/**
+ * Applies the owner's switches to what the real checks say, while those checks are pended:
+ * a hold beats everything; real approval is always trusted (and keeps its own tier); otherwise an
+ * approval for this person, or for everyone, approves at tier 1. The steps are left as they are,
+ * so the passport keeps showing what was really done.
+ */
+export function resolveKyc(
+  derived: KycSummary,
+  switches: Readonly<{ override: KycOverride | null; autoApprove: boolean }>,
+): KycSummary {
+  if (switches.override === "denied") {
+    return { ...derived, status: "rejected", tier: 0, via: "hold", note: HOLD_NOTE };
+  }
+  if (derived.status === "approved") return derived;
+  if (switches.override === "approved" || switches.autoApprove) {
+    return { ...derived, status: "approved", tier: 1, via: "waived", note: WAIVED_NOTE };
+  }
+  return derived;
 }

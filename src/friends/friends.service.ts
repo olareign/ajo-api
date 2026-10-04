@@ -1,5 +1,7 @@
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import type { Env } from "../config/env.js";
+import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { Notifications } from "../notifications/notifications.service.js";
 import { coded } from "../payments/payment-intents.js";
@@ -50,6 +52,7 @@ export class Friends {
   constructor(
     private readonly db: DataSource,
     private readonly notifications: Notifications,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   /**
@@ -58,7 +61,7 @@ export class Friends {
    */
   async request(me: string, username: string): Promise<{ relation: Relation }> {
     return this.db.transaction(async (tx) => {
-      const them = await reachable(tx, me, username);
+      const them = await reachable(tx, me, username, this.env.KYC_AUTO_APPROVE);
       const { low, high } = await lockPair(tx, me, them.id);
       await assertNotBlocked(tx, me, them.id);
       const [existing] = await sql<FriendshipRow>(
@@ -102,7 +105,7 @@ export class Friends {
   /** Accepts a request someone sent you. Accepting a friendship you already have changes nothing. */
   async acceptFrom(me: string, username: string): Promise<{ relation: Relation }> {
     return this.db.transaction(async (tx) => {
-      const them = await reachable(tx, me, username);
+      const them = await reachable(tx, me, username, this.env.KYC_AUTO_APPROVE);
       const { low, high } = await lockPair(tx, me, them.id);
       const [row] = await sql<FriendshipRow>(
         tx,

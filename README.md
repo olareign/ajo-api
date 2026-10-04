@@ -30,18 +30,19 @@ API docs are served at `/api/docs` when `API_DOCS_ENABLED=true` (refused in prod
 
 ## Commands
 
-| Command                                                | What it does                                                                                          |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `pnpm test` / `pnpm test:watch`                        | Unit and HTTP tests                                                                                   |
-| `pnpm test:integration`                                | Integration tests against real Postgres and Redis (needs Docker)                                      |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`   | Static checks                                                                                         |
-| `pnpm build`                                           | Compile to `dist/`                                                                                    |
-| `pnpm migration:create src/database/migrations/<name>` | New empty migration; write the SQL by hand, then add it to `migrations/index.ts`                      |
-| `pnpm migration:run`                                   | Apply pending migrations (Render runs this before each deploy)                                        |
-| `scripts/sql/bring-database-up-to-date.sql`            | The schema as one re-runnable script for a SQL editor; keep in step with `migrations/`                |
-| `pnpm mail:check you@example.com`                      | Send one real email with the configured provider (`MAIL_PROVIDER=smtp` or `resend`) to prove it works |
-| `pnpm retention:run`                                   | Delete expired sessions and tokens once (the worker also does this every six hours)                   |
-| `pnpm openapi:generate` / `pnpm openapi:check`         | Write or verify `openapi.json`                                                                        |
+| Command                                                   | What it does                                                                                                                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test` / `pnpm test:watch`                           | Unit and HTTP tests                                                                                                                                              |
+| `pnpm test:integration`                                   | Integration tests against real Postgres and Redis (needs Docker)                                                                                                 |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`      | Static checks                                                                                                                                                    |
+| `pnpm build`                                              | Compile to `dist/`                                                                                                                                               |
+| `pnpm migration:create src/database/migrations/<name>`    | New empty migration; write the SQL by hand, then add it to `migrations/index.ts`                                                                                 |
+| `pnpm migration:run`                                      | Apply pending migrations (Render runs this before each deploy)                                                                                                   |
+| `scripts/sql/bring-database-up-to-date.sql`               | The schema as one re-runnable script for a SQL editor; keep in step with `migrations/`                                                                           |
+| `pnpm mail:check you@example.com`                         | Send one real email with the configured provider (`MAIL_PROVIDER=smtp` or `resend`) to prove it works                                                            |
+| `pnpm kyc:override <email> approve\|deny\|clear` / `list` | Approve or hold one person without the identity checks while they are pended; every change is logged (`KYC_AUTO_APPROVE=true` approves everyone, test keys only) |
+| `pnpm retention:run`                                      | Delete expired sessions and tokens once (the worker also does this every six hours)                                                                              |
+| `pnpm openapi:generate` / `pnpm openapi:check`            | Write or verify `openapi.json`                                                                                                                                   |
 
 ## Security baseline
 

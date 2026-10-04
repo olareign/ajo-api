@@ -21,4 +21,15 @@ export class KycResponse {
   @ApiProperty({ enum: [0, 1, 2], description: "2 once the national check is also approved" })
   tier!: number;
   @ApiProperty({ type: [KycStepResponse] }) steps!: KycStepResponse[];
+  @ApiProperty({
+    enum: ["checks", "waived", "hold"],
+    description:
+      "Where status comes from: the identity checks, an approval without them while they are not switched on (waived), or a hold on the account",
+  })
+  via!: string;
+  @ApiProperty({
+    nullable: true,
+    description: "A sentence for the person when status is not from the checks",
+  })
+  note!: string | null;
 }

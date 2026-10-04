@@ -47,6 +47,11 @@ export class ProfileResponse {
   @ApiProperty({ enum: ["not_started", "in_progress", "pending", "approved", "rejected"] })
   kycStatus!: string;
   @ApiProperty({ enum: [0, 1, 2] }) kycTier!: number;
+  @ApiProperty({
+    enum: ["checks", "waived", "hold"],
+    description: "Whether kycStatus comes from the checks, an approval without them, or a hold",
+  })
+  kycVia!: string;
 }
 
 @ApiTags("profile")
@@ -72,7 +77,7 @@ export class MeController {
       [auth.userId],
     );
     if (!user) throw new NotFoundException();
-    const { status, tier } = await this.kyc.summaryFor(auth.userId);
+    const { status, tier, via } = await this.kyc.summaryFor(auth.userId);
     return {
       id: user.id,
       email: user.email,
@@ -86,6 +91,7 @@ export class MeController {
       onboarded: Boolean(user.country && user.goal && user.username && user.has_pin),
       kycStatus: status,
       kycTier: tier,
+      kycVia: via,
     };
   }
 
