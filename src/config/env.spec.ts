@@ -133,6 +133,15 @@ describe("adapter configuration", () => {
     expect(env.GOCARDLESS_ACCESS_TOKEN).toBeUndefined();
   });
 
+  it("sweeps payments every minute by default, can be turned off, and stays quiet in tests", () => {
+    expect(loadEnv({ ...prod }).PAYMENT_SWEEP_SECONDS).toBe(60);
+    expect(loadEnv({ ...prod, PAYMENT_SWEEP_SECONDS: "0" }).PAYMENT_SWEEP_SECONDS).toBe(0);
+    expect(loadEnv({ ...prod, NODE_ENV: "test" }).PAYMENT_SWEEP_SECONDS).toBe(0);
+    expect(() => loadEnv({ ...prod, PAYMENT_SWEEP_SECONDS: "-1" })).toThrow(
+      /PAYMENT_SWEEP_SECONDS/,
+    );
+  });
+
   it("only accepts a Paystack secret key that looks like one, and a GoCardless token with its webhook secret", () => {
     expect(() => loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "pk_test_publickey" })).toThrow(
       /PAYSTACK_SECRET_KEY/,

@@ -80,6 +80,11 @@ const schema = z
     GOCARDLESS_ENVIRONMENT: z.enum(["sandbox", "live"]).default("sandbox"),
     /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
     PAYMENTS_FAKE: flag.default(false),
+    /**
+     * How often, in seconds, the API retries held partner messages and settles payments that sat
+     * pending. 0 turns it off (the default in tests, which drive it by hand).
+     */
+    PAYMENT_SWEEP_SECONDS: z.coerce.number().int().min(0).max(3600).optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -92,6 +97,7 @@ const schema = z
   })
   .transform((env) => ({
     ...env,
+    PAYMENT_SWEEP_SECONDS: env.PAYMENT_SWEEP_SECONDS ?? (env.NODE_ENV === "test" ? 0 : 60),
     DATABASE_SSL: env.DATABASE_SSL ?? env.NODE_ENV === "production",
     WEB_APP_URL: env.WEB_APP_URL ?? (env.NODE_ENV === "production" ? "" : "http://localhost:3000"),
     JWT_SECRET: env.JWT_SECRET ?? (env.NODE_ENV === "production" ? "" : DEV_JWT_SECRET),
