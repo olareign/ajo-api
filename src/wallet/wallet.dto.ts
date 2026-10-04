@@ -58,3 +58,22 @@ export class TransactionsQuery {
   @Matches(/^\d{1,18}$/)
   before?: string;
 }
+
+export class RailsConnected {
+  @ApiProperty() fund!: boolean;
+  @ApiProperty() mandate!: boolean;
+  @ApiProperty() withdraw!: boolean;
+}
+
+export class RailsResponse {
+  @ApiProperty({ enum: ["NG", "GB"], nullable: true }) country!: string | null;
+  @ApiProperty({ enum: ["NGN", "GBP"], nullable: true, description: "The wallet's currency" })
+  currency!: string | null;
+  @ApiProperty({ description: "Identity checks are approved, so money can move" })
+  kycApproved!: boolean;
+  @ApiProperty({
+    type: RailsConnected,
+    description: "Which payment actions have a connected partner behind them",
+  })
+  connected!: RailsConnected;
+}

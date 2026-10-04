@@ -28,6 +28,7 @@ import {
   UsernameAvailableQuery,
   UsernameAvailableResponse,
 } from "./onboarding.dto.js";
+import { KycService } from "../kyc/kyc.service.js";
 import { PinService } from "./pin.service.js";
 import { UsernameService } from "./username.service.js";
 
@@ -43,6 +44,9 @@ export class ProfileResponse {
   @ApiProperty({ enum: ["solo", "circle", "both"], nullable: true }) goal!: string | null;
   @ApiProperty() hasPin!: boolean;
   @ApiProperty({ description: "Country, goal, username and PIN are all set" }) onboarded!: boolean;
+  @ApiProperty({ enum: ["not_started", "in_progress", "pending", "approved", "rejected"] })
+  kycStatus!: string;
+  @ApiProperty({ enum: [0, 1, 2] }) kycTier!: number;
 }
 
 @ApiTags("profile")
@@ -53,6 +57,7 @@ export class MeController {
     private readonly db: DataSource,
     private readonly pins: PinService,
     private readonly usernames: UsernameService,
+    private readonly kyc: KycService,
   ) {}
 
   /** Only the caller's own record; the id comes from the session, never from the request. */
@@ -67,6 +72,7 @@ export class MeController {
       [auth.userId],
     );
     if (!user) throw new NotFoundException();
+    const { status, tier } = await this.kyc.summaryFor(auth.userId);
     return {
       id: user.id,
       email: user.email,
@@ -78,6 +84,8 @@ export class MeController {
       goal: user.goal,
       hasPin: user.has_pin,
       onboarded: Boolean(user.country && user.goal && user.username && user.has_pin),
+      kycStatus: status,
+      kycTier: tier,
     };
   }
 

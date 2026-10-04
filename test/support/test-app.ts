@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing";
 import { inject } from "vitest";
 import { AppModule } from "../../src/app.module.js";
 import { AuthModule } from "../../src/auth/auth.module.js";
+import { KycModule } from "../../src/kyc/kyc.module.js";
 import { configureApp } from "../../src/app/configure-app.js";
 import type { Env } from "../../src/config/env.js";
 import { ENV } from "../../src/config/env.module.js";
@@ -37,7 +38,7 @@ export async function createTestApp(
 
   Object.assign(process.env, env);
   const moduleRef = await Test.createTestingModule({
-    imports: [AppModule, AuthModule],
+    imports: [AppModule, AuthModule, KycModule],
     controllers: [...probes],
   }).compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({

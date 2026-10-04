@@ -18,7 +18,7 @@ import { createOneTimeToken, hashToken } from "./tokens.js";
 export const RESET_TTL_MINUTES = 60;
 /** At most one reset link a minute, and this many a day, for one address. */
 export const RESET_COOLDOWN_SECONDS = 60;
-export const MAX_RESET_EMAILS_PER_DAY = 5;
+export const MAX_RESET_EMAILS_PER_DAY = 10;
 
 @Injectable()
 export class PasswordResetService {
@@ -36,7 +36,7 @@ export class PasswordResetService {
   /**
    * Emails a reset link if the address has an account. The caller answers the same either way, and
    * the email is sent without waiting, so neither the response nor its timing reveals who has one.
-   * A new request cancels any earlier link. One address gets one link a minute and five a day, so a
+   * A new request cancels any earlier link. One address gets one link a minute and ten a day, so a
    * stranger cannot flood someone's inbox; a refused request cancels nothing and answers the same.
    */
   async request(email: string): Promise<void> {

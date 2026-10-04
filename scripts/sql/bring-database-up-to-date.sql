@@ -359,6 +359,21 @@ CREATE TABLE IF NOT EXISTS trusted_devices (
 CREATE INDEX IF NOT EXISTS trusted_devices_user_idx ON trusted_devices (user_id);
 CREATE INDEX IF NOT EXISTS trusted_devices_expires_idx ON trusted_devices (expires_at);
 
+-- 1790900080000 CreateKycSteps --------------------------------------------------------------
+-- One row per person per verification step (waiting, approved or refused with a reason). Overall
+-- status and tier are worked out from these rows, never stored.
+CREATE TABLE IF NOT EXISTS kyc_steps (
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  step text NOT NULL
+    CHECK (step IN ('id', 'selfie', 'address', 'location', 'bank', 'national_check')),
+  status text NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+  reason text CHECK (char_length(reason) <= 300),
+  provider_ref text CHECK (char_length(provider_ref) <= 200),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, step)
+);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -381,14 +396,15 @@ SELECT v.ts, v.name
     (1790900041000::bigint, 'AddRetentionSupport1790900041000'),
     (1790900050000::bigint, 'AddUsername1790900050000'),
     (1790900060000::bigint, 'AddLoginDevices1790900060000'),
-    (1790900070000::bigint, 'AddTrustedDevices1790900070000')
+    (1790900070000::bigint, 'AddTrustedDevices1790900070000'),
+    (1790900080000::bigint, 'CreateKycSteps1790900080000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all twelve migrations must be listed.
+-- `username` must be there (citext, nullable); and all thirteen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')

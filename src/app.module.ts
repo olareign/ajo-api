@@ -12,6 +12,7 @@ import { AdaptersModule } from "./adapters/adapters.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./identity/identity.module.js";
+import { KycModule } from "./kyc/kyc.module.js";
 import { LedgerModule } from "./ledger/ledger.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
@@ -48,6 +49,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     HealthModule,
     IdentityModule,
     AuthModule,
+    KycModule,
     LedgerModule,
     WalletModule,
   ],
