@@ -50,6 +50,12 @@ services:
       # Webhook URL to register with Paystack: <this API>/api/v1/webhooks/paystack.
       - key: PAYSTACK_SECRET_KEY
         sync: false
+      # While the identity checks are pended: "true" approves everyone without them (tier 1), "false"
+      # or empty turns that off again. Set it in the dashboard (a change restarts the API). The API
+      # refuses to start with it on beside a live (sk_live_) payment key. To approve one person
+      # instead, use `pnpm kyc:override <email> approve` or set users.kyc_override in the database.
+      - key: KYC_AUTO_APPROVE
+        sync: false
       # Shared with the web app's server (the same value in its BFF_SHARED_SECRET): lets the API see each
       # person's own address and device, so rate limits and sign-in alerts are per person.
       - key: BFF_SHARED_SECRET

@@ -255,3 +255,47 @@ describe("FIELD_ENCRYPTION_KEY", () => {
     expect(a).not.toBe(valid.FIELD_ENCRYPTION_KEY);
   });
 });
+
+describe("KYC_AUTO_APPROVE", () => {
+  it("is off unless asked for", () => {
+    expect(loadEnv(valid).KYC_AUTO_APPROVE).toBe(false);
+  });
+
+  it("can be on, in production too, while payments use test keys or no key", () => {
+    expect(loadEnv({ ...valid, KYC_AUTO_APPROVE: "true" }).KYC_AUTO_APPROVE).toBe(true);
+    expect(
+      loadEnv({ ...valid, KYC_AUTO_APPROVE: "true", PAYSTACK_SECRET_KEY: "sk_test_abc123" })
+        .KYC_AUTO_APPROVE,
+    ).toBe(true);
+  });
+
+  it("refuses to start beside a live payment key, naming the setting and never the key", () => {
+    expect(() =>
+      loadEnv({
+        ...valid,
+        KYC_AUTO_APPROVE: "true",
+        PAYSTACK_SECRET_KEY: "sk_live_donotprint123",
+      }),
+    ).toThrow(/KYC_AUTO_APPROVE/);
+    try {
+      loadEnv({
+        ...valid,
+        KYC_AUTO_APPROVE: "true",
+        PAYSTACK_SECRET_KEY: "sk_live_abc123secret",
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain("sk_live_abc123secret");
+    }
+  });
+
+  it("is fine with a live key when switched off", () => {
+    expect(
+      loadEnv({ ...valid, KYC_AUTO_APPROVE: "false", PAYSTACK_SECRET_KEY: "sk_live_abc123" })
+        .KYC_AUTO_APPROVE,
+    ).toBe(false);
+  });
+
+  it("only accepts true or false", () => {
+    expect(() => loadEnv({ ...valid, KYC_AUTO_APPROVE: "yes" })).toThrow(/KYC_AUTO_APPROVE/);
+  });
+});

@@ -9,6 +9,7 @@ import { AddRetentionSupport1790900041000 } from "./1790900041000-add-retention-
 import { AddUsername1790900050000 } from "./1790900050000-add-username.js";
 import { AddLoginDevices1790900060000 } from "./1790900060000-add-login-devices.js";
 import { AddTrustedDevices1790900070000 } from "./1790900070000-add-trusted-devices.js";
+import { AddKycOverride1790900120000 } from "./1790900120000-add-kyc-override.js";
 import { CreateKycSteps1790900080000 } from "./1790900080000-create-kyc-steps.js";
 import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js";
 import { CreateNotifications1790900100000 } from "./1790900100000-create-notifications.js";
@@ -33,4 +34,5 @@ export const migrations = [
   CreatePayments1790900090000,
   CreateNotifications1790900100000,
   CreateSavings1790900110000,
+  AddKycOverride1790900120000,
 ];
