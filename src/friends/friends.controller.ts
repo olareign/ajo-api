@@ -29,6 +29,8 @@ import {
   UsernameDto,
 } from "./friends.dto.js";
 import { Friends, type Relation } from "./friends.service.js";
+import { publicTrust } from "../groups/groups.service.js";
+import { TrustService } from "../groups/trust.service.js";
 import { Invites } from "./invites.service.js";
 import { Safety } from "./safety.service.js";
 
@@ -45,6 +47,7 @@ export class FriendsController {
     private readonly safety: Safety,
     private readonly discovery: Discovery,
     private readonly invites: Invites,
+    private readonly trust: TrustService,
   ) {}
 
   /** Verified people whose username starts with what was typed. */
@@ -56,7 +59,9 @@ export class FriendsController {
     @Query() query: SearchQuery,
   ): Promise<PersonResponse[]> {
     const found = await this.discovery.search(auth.userId, query.q);
+    const trust = await this.trust.profiles(found.map((f) => f.id));
     return found.map((f) => ({
+      trust: publicTrust(trust.get(f.id)),
       username: f.username,
       displayName: f.display_name,
       relation: f.relation,
@@ -79,6 +84,7 @@ export class FriendsController {
         code: "person_not_found",
       });
     return {
+      trust: publicTrust((await this.trust.profiles([f.id])).get(f.id)),
       username: f.username,
       displayName: f.display_name,
       relation: f.relation,
@@ -91,8 +97,10 @@ export class FriendsController {
   @ApiOkResponse({ type: FriendsResponse })
   async list(@CurrentUser() auth: AccessClaims): Promise<FriendsResponse> {
     const rows = await this.friends.list(auth.userId);
+    const trust = await this.trust.profiles(rows.map((r) => r.id));
     return {
       friends: rows.map((r) => ({
+        trust: publicTrust(trust.get(r.id)),
         username: r.username,
         displayName: r.display_name,
         since: r.since.toISOString(),
@@ -119,7 +127,9 @@ export class FriendsController {
   @ApiOkResponse({ type: [SuggestionResponse] })
   async suggestions(@CurrentUser() auth: AccessClaims): Promise<SuggestionResponse[]> {
     const rows = await this.discovery.suggestions(auth.userId);
+    const trust = await this.trust.profiles(rows.map((r) => r.id));
     return rows.map((r) => ({
+      trust: publicTrust(trust.get(r.id)),
       username: r.username,
       displayName: r.display_name,
       relation: r.relation,

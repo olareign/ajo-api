@@ -24,6 +24,7 @@ type FriendshipRow = {
 };
 
 export type FriendRow = {
+  id: string;
   username: string;
   display_name: string;
   since: Date;
@@ -232,7 +233,7 @@ export class Friends {
 
   async list(me: string): Promise<FriendRow[]> {
     return this.db.query<FriendRow[]>(
-      `SELECT u.username::text AS username, u.display_name, f.responded_at AS since, ${NATIONAL} AS national
+      `SELECT u.id, u.username::text AS username, u.display_name, f.responded_at AS since, ${NATIONAL} AS national
          FROM friendships f
          JOIN users u ON u.id = CASE WHEN f.low_id = $1 THEN f.high_id ELSE f.low_id END
         WHERE f.status = 'accepted' AND $1 IN (f.low_id, f.high_id)

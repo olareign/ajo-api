@@ -5,6 +5,7 @@ import { approvedSql, blockedSql } from "./people.js";
 import type { Relation } from "./friends.service.js";
 
 export type Found = {
+  id: string;
   username: string;
   display_name: string;
   relation: Relation;
@@ -56,7 +57,7 @@ export class Discovery {
       });
     }
     return this.db.query<Found[]>(
-      `SELECT u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
+      `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
          FROM users u ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND u.status = 'active' AND u.username IS NOT NULL
           AND u.username::text LIKE $2 ESCAPE '\\' AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}
@@ -69,7 +70,7 @@ export class Discovery {
   async profile(me: string, raw: string): Promise<Found | null> {
     const username = normalizeUsername(raw);
     const [row] = await this.db.query<Found[]>(
-      `SELECT u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
+      `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
          FROM users u ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND u.username = $2 AND u.status = 'active'
           AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}`,
@@ -96,7 +97,7 @@ export class Discovery {
            JOIN friendships g ON g.status = 'accepted' AND mine.fid IN (g.low_id, g.high_id)
            JOIN users mu ON mu.id = mine.fid
           GROUP BY 1)
-       SELECT u.username::text AS username, u.display_name, 'none' AS relation, c.mutual AS mutual,
+       SELECT u.id, u.username::text AS username, u.display_name, 'none' AS relation, c.mutual AS mutual,
               ${NATIONAL} AS national, c.names AS names
          FROM cand c JOIN users u ON u.id = c.uid
          ${JOIN_FRIENDSHIP}
@@ -106,7 +107,7 @@ export class Discovery {
       [me],
     );
     const referred = await this.db.query<(Found & { reason: Suggestion["reason"] })[]>(
-      `SELECT u.username::text AS username, u.display_name, 'none' AS relation, ${MUTUAL} AS mutual,
+      `SELECT u.id, u.username::text AS username, u.display_name, 'none' AS relation, ${MUTUAL} AS mutual,
               ${NATIONAL} AS national,
               CASE WHEN r.invitee_id = $1 THEN 'invited_you' ELSE 'you_invited' END AS reason
          FROM referrals r

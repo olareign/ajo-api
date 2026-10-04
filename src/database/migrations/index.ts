@@ -14,6 +14,7 @@ import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js"
 import { CreateNotifications1790900100000 } from "./1790900100000-create-notifications.js";
 import { CreateSavings1790900110000 } from "./1790900110000-create-savings.js";
 import { CreateFriends1790900120000 } from "./1790900120000-create-friends.js";
+import { CreateGroups1790900130000 } from "./1790900130000-create-groups.js";
 import { CreatePasswordResetTokens1790900010000 } from "./1790900010000-create-password-reset-tokens.js";
 
 /** Every migration, in order. Listed explicitly so builds and ESM loading never miss one. */
@@ -35,4 +36,5 @@ export const migrations = [
   CreateNotifications1790900100000,
   CreateSavings1790900110000,
   CreateFriends1790900120000,
+  CreateGroups1790900130000,
 ];

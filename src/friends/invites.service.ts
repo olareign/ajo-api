@@ -7,7 +7,8 @@ import { INVITE_CODE } from "./referrals.js";
 
 /** No 0, 1, I, O: a code read aloud or typed from a screenshot is not mistaken. */
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const code = () => Array.from(randomBytes(8), (b) => ALPHABET[b % ALPHABET.length]).join("");
+export const newInviteCode = () =>
+  Array.from(randomBytes(8), (b) => ALPHABET[b % ALPHABET.length]).join("");
 
 /** A person's invite link, and what joining through one does: it suggests the inviter, nothing more. */
 @Injectable()
@@ -27,7 +28,7 @@ export class Invites {
       // A clash on the code (rare) just tries another; a clash on the person means another request made it first.
       await this.db.query(
         `INSERT INTO invite_links (user_id, code) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [userId, code()],
+        [userId, newInviteCode()],
       );
       existing = await this.db.query<{ code: string }[]>(
         `SELECT code FROM invite_links WHERE user_id = $1`,

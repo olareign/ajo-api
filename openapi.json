@@ -1374,22 +1374,148 @@
         ]
       }
     },
-    "/api/v1/notifications": {
-      "get": {
-        "operationId": "NotificationsController_list",
-        "parameters": [
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
+    "/api/v1/groups/preview": {
+      "post": {
+        "operationId": "GroupsController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupPreviewResponse"
+                }
+              }
             }
           },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
           {
-            "name": "before",
-            "required": false,
-            "in": "query",
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups": {
+      "post": {
+        "operationId": "GroupsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      },
+      "get": {
+        "operationId": "GroupsController_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/discover": {
+      "get": {
+        "operationId": "GroupsController_discover",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/code/{code}": {
+      "get": {
+        "operationId": "GroupsController_byCode",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -1401,29 +1527,52 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotificationsResponse"
+                  "$ref": "#/components/schemas/GroupSummaryResponse"
                 }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/join": {
+      "post": {
+        "operationId": "GroupsController_join",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinDto"
               }
             }
           }
         },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "notifications"
-        ]
-      }
-    },
-    "/api/v1/notifications/read-all": {
-      "post": {
-        "operationId": "NotificationsController_readAll",
-        "parameters": [],
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
           }
         },
         "security": [
@@ -1432,13 +1581,13 @@
           }
         ],
         "tags": [
-          "notifications"
+          "groups"
         ]
       }
     },
-    "/api/v1/notifications/{id}/read": {
-      "post": {
-        "operationId": "NotificationsController_read",
+    "/api/v1/groups/{id}": {
+      "get": {
+        "operationId": "GroupsController_detail",
         "parameters": [
           {
             "name": "id",
@@ -1450,8 +1599,18 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
           }
         },
         "security": [
@@ -1460,7 +1619,353 @@
           }
         ],
         "tags": [
-          "notifications"
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/join": {
+      "post": {
+        "operationId": "GroupsController_joinPublic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/leave": {
+      "post": {
+        "operationId": "GroupsController_leave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/cancel": {
+      "post": {
+        "operationId": "GroupsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/invite": {
+      "post": {
+        "operationId": "GroupsController_invite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/pick": {
+      "post": {
+        "operationId": "GroupsController_pick",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/swaps": {
+      "get": {
+        "operationId": "GroupsController_swaps",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SwapResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      },
+      "post": {
+        "operationId": "GroupsController_proposeSwap",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/v1/groups/{id}/swaps/{swapId}/answer": {
+      "post": {
+        "operationId": "GroupsController_answerSwap",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "swapId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "groups"
         ]
       }
     },
@@ -1795,6 +2300,96 @@
         },
         "tags": [
           "webhooks"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "NotificationsController_readAll",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "operationId": "NotificationsController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
         ]
       }
     },
@@ -2730,6 +3325,27 @@
           "code"
         ]
       },
+      "TrustResponse": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "new",
+              "building",
+              "trusted"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "description": "0 to 100, worked out from payments made in circles"
+          }
+        },
+        "required": [
+          "level",
+          "score"
+        ]
+      },
       "PersonResponse": {
         "type": "object",
         "properties": {
@@ -2760,6 +3376,9 @@
               2
             ],
             "description": "1 passport stamped; 2 with a national check too"
+          },
+          "trust": {
+            "$ref": "#/components/schemas/TrustResponse"
           }
         },
         "required": [
@@ -2767,7 +3386,8 @@
           "displayName",
           "relation",
           "mutualFriends",
-          "tier"
+          "tier",
+          "trust"
         ]
       },
       "FriendResponse": {
@@ -2788,13 +3408,17 @@
               1,
               2
             ]
+          },
+          "trust": {
+            "$ref": "#/components/schemas/TrustResponse"
           }
         },
         "required": [
           "username",
           "displayName",
           "since",
-          "tier"
+          "tier",
+          "trust"
         ]
       },
       "FriendsResponse": {
@@ -2890,6 +3514,9 @@
             ],
             "description": "1 passport stamped; 2 with a national check too"
           },
+          "trust": {
+            "$ref": "#/components/schemas/TrustResponse"
+          },
           "reason": {
             "type": "string",
             "enum": [
@@ -2912,6 +3539,7 @@
           "relation",
           "mutualFriends",
           "tier",
+          "trust",
           "reason",
           "mutualNames"
         ]
@@ -3027,67 +3655,654 @@
           "username"
         ]
       },
-      "NotificationResponse": {
+      "GroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Cousins"
+          },
+          "community": {
+            "type": "string",
+            "example": "Lekki book club"
+          },
+          "contribution": {
+            "type": "string",
+            "description": "Whole minor units each person pays each round"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ]
+          },
+          "size": {
+            "type": "number",
+            "description": "How many people, which is also how many rounds",
+            "example": 6
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-15",
+            "description": "The day the first round is collected"
+          },
+          "orderMethod": {
+            "type": "string",
+            "enum": [
+              "random",
+              "pick",
+              "join_order"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "contribution",
+          "frequency",
+          "size",
+          "startDate",
+          "orderMethod",
+          "visibility"
+        ]
+      },
+      "MoneyResponse": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units (kobo, pence) as a string"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "NGN",
+              "GBP"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ]
+      },
+      "GroupPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "dates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pot": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "fee": {
+            "description": "The fee taken from each payout",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "deposit": {
+            "description": "What an untrusted member locks until the circle ends",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "earlyDeposit": {
+            "description": "What an untrusted member locks to take an early turn",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "earlySpots": {
+            "type": "number"
+          },
+          "graceDays": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "dates",
+          "pot",
+          "fee",
+          "deposit",
+          "earlyDeposit",
+          "earlySpots",
+          "graceDays"
+        ]
+      },
+      "CreatorResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "object",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "displayName"
+        ]
+      },
+      "GroupDetailResponse": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "kind": {
+          "name": {
             "type": "string"
           },
-          "title": {
-            "type": "string"
-          },
-          "body": {
-            "type": "string"
-          },
-          "link": {
-            "type": "object",
-            "nullable": true,
-            "description": "An in-app path to open"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "readAt": {
+          "community": {
             "type": "object",
             "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "picking",
+              "running",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string",
+            "description": "Each person's contribution, whole minor units"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ]
+          },
+          "size": {
+            "type": "number"
+          },
+          "memberCount": {
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-15"
+          },
+          "orderMethod": {
+            "type": "string",
+            "enum": [
+              "random",
+              "pick",
+              "join_order"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ]
+          },
+          "pot": {
+            "type": "string",
+            "description": "What each turn pays out before any fee, whole minor units"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/CreatorResponse"
+          },
+          "isMember": {
+            "type": "boolean"
+          },
+          "isCreator": {
+            "type": "boolean"
+          },
+          "mySpot": {
+            "type": "object",
+            "nullable": true
+          },
+          "friendsIn": {
+            "type": "number",
+            "description": "Friends of yours who are in it"
+          },
+          "inviteCode": {
+            "type": "object",
+            "nullable": true,
+            "description": "Only shown to members"
+          },
+          "members": {
+            "description": "Members, with their turn, trust level and this round's payment (members only)",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "rounds": {
+            "description": "Every round: its day, who takes it, how it is going, and who has paid",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "draws": {
+            "description": "Each draw, with its seed and result, so anyone can check it",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "myDeposit": {
+            "nullable": true,
+            "description": "What you have locked here",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "pickDeadline": {
+            "type": "object",
+            "nullable": true
+          },
+          "nextDue": {
+            "type": "object",
+            "nullable": true
+          },
+          "graceDays": {
+            "type": "number"
+          },
+          "rules": {
+            "type": "object"
           }
         },
         "required": [
           "id",
-          "kind",
-          "title",
-          "body",
-          "link",
-          "createdAt",
-          "readAt"
+          "name",
+          "community",
+          "status",
+          "currency",
+          "contribution",
+          "frequency",
+          "size",
+          "memberCount",
+          "startDate",
+          "orderMethod",
+          "visibility",
+          "pot",
+          "creator",
+          "isMember",
+          "isCreator",
+          "mySpot",
+          "friendsIn",
+          "inviteCode",
+          "members",
+          "rounds",
+          "draws",
+          "myDeposit",
+          "pickDeadline",
+          "nextDue",
+          "graceDays",
+          "rules"
         ]
       },
-      "NotificationsResponse": {
+      "GroupSummaryResponse": {
         "type": "object",
         "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NotificationResponse"
-            }
+          "id": {
+            "type": "string"
           },
-          "next": {
+          "name": {
+            "type": "string"
+          },
+          "community": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "picking",
+              "running",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string",
+            "description": "Each person's contribution, whole minor units"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ]
+          },
+          "size": {
+            "type": "number"
+          },
+          "memberCount": {
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-15"
+          },
+          "orderMethod": {
+            "type": "string",
+            "enum": [
+              "random",
+              "pick",
+              "join_order"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ]
+          },
+          "pot": {
+            "type": "string",
+            "description": "What each turn pays out before any fee, whole minor units"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/CreatorResponse"
+          },
+          "isMember": {
+            "type": "boolean"
+          },
+          "isCreator": {
+            "type": "boolean"
+          },
+          "mySpot": {
+            "type": "object",
+            "nullable": true
+          },
+          "friendsIn": {
+            "type": "number",
+            "description": "Friends of yours who are in it"
+          },
+          "inviteCode": {
             "type": "object",
             "nullable": true,
-            "description": "Pass as `before` for the next page"
-          },
-          "unread": {
-            "type": "number",
-            "description": "How many are unread, across every page"
+            "description": "Only shown to members"
           }
         },
         "required": [
-          "items",
-          "next",
-          "unread"
+          "id",
+          "name",
+          "community",
+          "status",
+          "currency",
+          "contribution",
+          "frequency",
+          "size",
+          "memberCount",
+          "startDate",
+          "orderMethod",
+          "visibility",
+          "pot",
+          "creator",
+          "isMember",
+          "isCreator",
+          "mySpot",
+          "friendsIn",
+          "inviteCode"
+        ]
+      },
+      "GroupsResponse": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupSummaryResponse"
+            }
+          }
+        },
+        "required": [
+          "groups"
+        ]
+      },
+      "DiscoverResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "community": {
+            "type": "object",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "picking",
+              "running",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string",
+            "description": "Each person's contribution, whole minor units"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ]
+          },
+          "size": {
+            "type": "number"
+          },
+          "memberCount": {
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-15"
+          },
+          "orderMethod": {
+            "type": "string",
+            "enum": [
+              "random",
+              "pick",
+              "join_order"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "private",
+              "public"
+            ]
+          },
+          "pot": {
+            "type": "string",
+            "description": "What each turn pays out before any fee, whole minor units"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/CreatorResponse"
+          },
+          "isMember": {
+            "type": "boolean"
+          },
+          "isCreator": {
+            "type": "boolean"
+          },
+          "mySpot": {
+            "type": "object",
+            "nullable": true
+          },
+          "friendsIn": {
+            "type": "number",
+            "description": "Friends of yours who are in it"
+          },
+          "inviteCode": {
+            "type": "object",
+            "nullable": true,
+            "description": "Only shown to members"
+          },
+          "score": {
+            "type": "number",
+            "description": "How well it fits you: friends in it count most"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "community",
+          "status",
+          "currency",
+          "contribution",
+          "frequency",
+          "size",
+          "memberCount",
+          "startDate",
+          "orderMethod",
+          "visibility",
+          "pot",
+          "creator",
+          "isMember",
+          "isCreator",
+          "mySpot",
+          "friendsIn",
+          "inviteCode",
+          "score"
+        ]
+      },
+      "DiscoverListResponse": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscoverResponse"
+            }
+          }
+        },
+        "required": [
+          "groups"
+        ]
+      },
+      "JoinDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "K7M2QH9R",
+            "description": "The circle's invite code"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "UsernameBody": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "ada_ola"
+          }
+        },
+        "required": [
+          "username"
+        ]
+      },
+      "PickDto": {
+        "type": "object",
+        "properties": {
+          "spot": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "spot"
+        ]
+      },
+      "SwapResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fromUsername": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": "string"
+          },
+          "toUsername": {
+            "type": "string"
+          },
+          "toName": {
+            "type": "string"
+          },
+          "incoming": {
+            "type": "boolean",
+            "description": "True when it was asked of you"
+          }
+        },
+        "required": [
+          "id",
+          "fromUsername",
+          "fromName",
+          "toUsername",
+          "toName",
+          "incoming"
+        ]
+      },
+      "AnswerDto": {
+        "type": "object",
+        "properties": {
+          "accept": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accept"
         ]
       },
       "FundDto": {
@@ -3110,26 +4325,6 @@
         "required": [
           "amount",
           "method"
-        ]
-      },
-      "MoneyResponse": {
-        "type": "object",
-        "properties": {
-          "amount": {
-            "type": "string",
-            "description": "Whole minor units (kobo, pence) as a string"
-          },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "NGN",
-              "GBP"
-            ]
-          }
-        },
-        "required": [
-          "amount",
-          "currency"
         ]
       },
       "ActionResponse": {
@@ -3340,6 +4535,69 @@
         "required": [
           "bankCode",
           "accountNumber"
+        ]
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "link": {
+            "type": "object",
+            "nullable": true,
+            "description": "An in-app path to open"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "readAt": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "createdAt",
+          "readAt"
+        ]
+      },
+      "NotificationsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "next": {
+            "type": "object",
+            "nullable": true,
+            "description": "Pass as `before` for the next page"
+          },
+          "unread": {
+            "type": "number",
+            "description": "How many are unread, across every page"
+          }
+        },
+        "required": [
+          "items",
+          "next",
+          "unread"
         ]
       },
       "PlanDto": {

@@ -31,6 +31,12 @@ export class SearchQuery {
   q!: string;
 }
 
+export class TrustResponse {
+  @ApiProperty({ enum: ["new", "building", "trusted"] }) level!: string;
+  @ApiProperty({ description: "0 to 100, worked out from payments made in circles" })
+  score!: number;
+}
+
 export class PersonResponse {
   @ApiProperty() username!: string;
   @ApiProperty() displayName!: string;
@@ -42,6 +48,7 @@ export class PersonResponse {
   @ApiProperty({ description: "Friends you have in common" }) mutualFriends!: number;
   @ApiProperty({ enum: [1, 2], description: "1 passport stamped; 2 with a national check too" })
   tier!: number;
+  @ApiProperty({ type: TrustResponse }) trust!: TrustResponse;
 }
 
 export class SuggestionResponse extends PersonResponse {
@@ -55,6 +62,7 @@ export class FriendResponse {
   @ApiProperty() displayName!: string;
   @ApiProperty() since!: string;
   @ApiProperty({ enum: [1, 2] }) tier!: number;
+  @ApiProperty({ type: TrustResponse }) trust!: TrustResponse;
 }
 
 export class FriendsResponse {

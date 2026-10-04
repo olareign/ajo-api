@@ -87,6 +87,18 @@ const schema = z
      * (100 = 1%). 0, the default, charges nothing. A business decision, so it is a setting.
      */
     EARLY_WITHDRAWAL_PENALTY_BPS: z.coerce.number().int().min(0).max(2000).default(0),
+    /**
+     * Èsúsú groups. Business rules, so settings: the fee taken from each payout and the charge for a late
+     * payment (both in hundredths of a percent, 0 = none), how many days a payment may be late before the
+     * deposit covers it, how many contributions an untrusted member locks as a deposit (and, to take an
+     * early turn, how many), and whether joining needs an active auto-debit.
+     */
+    GROUP_FEE_BPS: z.coerce.number().int().min(0).max(2000).default(0),
+    GROUP_LATE_FEE_BPS: z.coerce.number().int().min(0).max(2000).default(0),
+    GROUP_GRACE_DAYS: z.coerce.number().int().min(0).max(14).default(2),
+    GROUP_DEPOSIT_BASE_X: z.coerce.number().int().min(0).max(10).default(1),
+    GROUP_DEPOSIT_EARLY_X: z.coerce.number().int().min(0).max(30).default(3),
+    GROUP_REQUIRES_MANDATE: flag.default(true),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */

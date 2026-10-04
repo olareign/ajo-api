@@ -136,3 +136,29 @@ describe("finding people", () => {
     await request(h.t.http()).get("/api/v1/friends/search?q=abc").expect(401);
   });
 });
+
+describe("trust on a person's card", () => {
+  it("says new for someone with no record, and trusted for someone with a good one, in search, the card and the friend list", async () => {
+    const me = await h.member();
+    const [fresh, veteran] = await h.crowd(2, "trustcard");
+    for (let i = 0; i < 8; i += 1) {
+      await h.t.db.query(
+        "INSERT INTO trust_events (user_id, kind, ref) VALUES ($1, 'payment_on_time', $2)",
+        [veteran, `card:${i}:${veteran}`],
+      );
+    }
+    const rows = await h.t.db.query(
+      "SELECT id, username::text AS username FROM users WHERE id = ANY($1::uuid[])",
+      [[fresh, veteran]],
+    );
+    const nameOf = (id: string) => rows.find((r: { id: string }) => r.id === id).username as string;
+    const a = (await me.call("get", `/friends/people/${nameOf(fresh!)}`).expect(200)).body;
+    const b = (await me.call("get", `/friends/people/${nameOf(veteran!)}`).expect(200)).body;
+    expect(a.trust).toEqual({ level: "new", score: 0 });
+    expect(b.trust).toEqual({ level: "trusted", score: 40 });
+    const found = (await me.call("get", `/friends/search?q=${nameOf(veteran!)}`).expect(200)).body;
+    expect(found[0].trust.level).toBe("trusted");
+    // A record is never shown in detail: only the level and score.
+    expect(Object.keys(b.trust).sort()).toEqual(["level", "score"]);
+  });
+});
