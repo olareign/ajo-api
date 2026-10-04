@@ -91,14 +91,14 @@ describe("the email queue", () => {
     const emailed = message({ email: true, title: "Your debit failed", link: "/save/abc" });
     await notifications.notify(who.id, emailed);
     await notifications.notify(who.id, message({ title: "Quiet one" }));
-    await Promise.all(Array.from({ length: 5 }, () => notifications.sendQueuedEmails()));
+    await Promise.all(Array.from({ length: 5 }, () => notifications.sendQueuedEmails(5000)));
     const mine = mailer.outbox.filter(
       (m) => m.to === who.email && m.subject === "Your debit failed",
     );
     expect(mine).toHaveLength(1);
     expect(mine[0]!.text).toContain("https://app.ajo.test/save/abc");
     expect(mailer.outbox.some((m) => m.to === who.email && m.subject === "Quiet one")).toBe(false);
-    await notifications.sendQueuedEmails();
+    await notifications.sendQueuedEmails(5000);
     expect(
       mailer.outbox.filter((m) => m.to === who.email && m.subject === "Your debit failed"),
     ).toHaveLength(1);
@@ -114,17 +114,17 @@ describe("the email queue", () => {
       return original(m);
     };
     try {
-      await notifications.sendQueuedEmails();
+      await notifications.sendQueuedEmails(5000);
       expect(mailer.outbox.some((m) => m.to === who.email && m.subject === "Flaky one")).toBe(
         false,
       );
       down = false;
-      await notifications.sendQueuedEmails();
+      await notifications.sendQueuedEmails(5000);
       expect(mailer.outbox.some((m) => m.to === who.email && m.subject === "Flaky one")).toBe(true);
 
       down = true;
       await notifications.notify(who.id, message({ email: true, title: "Hopeless" }));
-      for (let i = 0; i < MAX_EMAIL_ATTEMPTS + 2; i += 1) await notifications.sendQueuedEmails();
+      for (let i = 0; i < MAX_EMAIL_ATTEMPTS + 2; i += 1) await notifications.sendQueuedEmails(5000);
       const [row] = await t.db.query(
         "SELECT email_status, email_attempts FROM notifications WHERE user_id = $1 AND title = 'Hopeless'",
         [who.id],
