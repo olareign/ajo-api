@@ -215,3 +215,18 @@ export function newDeviceEmail(input: {
     note: "If it wasn't you, change your password now: that signs every other device out. You can also sign out of all devices from the Me screen in the app.",
   });
 }
+
+/** A message from the app (a reminder, a result), dressed like the rest. `link` is a full address. */
+export function notificationEmail(input: {
+  name: string;
+  title: string;
+  body: string;
+  link: string;
+}): Email {
+  return email(input.title, {
+    preheader: input.body,
+    heading: input.title,
+    paragraphs: [`Hi ${input.name},`, input.body],
+    button: { label: "Open Àjọ", href: input.link },
+  });
+}
