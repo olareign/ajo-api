@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -136,8 +137,82 @@ export class MfaService {
     });
     if (outcome === "not_enabled")
       throw new BadRequestException("The authenticator app is not turned on.");
-    if (outcome === "wrong_password") throw new UnauthorizedException(WRONG_PASSWORD);
-    if (outcome === "wrong_code") throw new UnauthorizedException(WRONG_CODE);
+    // A `code` marks these as a refused answer, not an expired session, so the web app does not sign
+    // the person out over a typo.
+    if (outcome === "wrong_password") {
+      throw new UnauthorizedException({ message: WRONG_PASSWORD, code: "password_wrong" });
+    }
+    if (outcome === "wrong_code") {
+      throw new UnauthorizedException({ message: WRONG_CODE, code: "mfa_code_wrong" });
+    }
+  }
+
+  /**
+   * The gate in front of any money movement: the authenticator app must be turned on, and a fresh
+   * code must come with the request. A code works once (the same replay rule as signing in) and wrong
+   * ones count towards the same lockout, so a stolen session cannot be used to guess at it.
+   */
+  async requireForMoney(userId: string, code: string | undefined): Promise<void> {
+    const outcome = await this.db.transaction(async (tx) => {
+      const [mfa] = await sql<{
+        totp_secret: string;
+        last_used_step: string | null;
+        failed_attempts: number;
+        locked: boolean;
+      }>(
+        tx,
+        `SELECT totp_secret, last_used_step, failed_attempts,
+                coalesce(locked_until > now(), false) AS locked
+           FROM user_mfa WHERE user_id = $1 AND confirmed_at IS NOT NULL FOR UPDATE`,
+        [userId],
+      );
+      if (!mfa) return "not_enrolled" as const;
+      if (code === undefined || code === "") return "no_code" as const;
+      if (mfa.locked) return "locked" as const;
+
+      const check = this.totp.verify(
+        this.encryption.decrypt(mfa.totp_secret, this.context(userId)),
+        code,
+        mfa.last_used_step === null ? null : Number(mfa.last_used_step),
+      );
+      if (check.ok) {
+        await sql(
+          tx,
+          `UPDATE user_mfa SET last_used_step = $2, failed_attempts = 0 WHERE user_id = $1`,
+          [userId, check.step],
+        );
+        return "ok" as const;
+      }
+      const failures = mfa.failed_attempts + 1;
+      const lock = failures >= MAX_FAILED_CODES;
+      await sql(
+        tx,
+        `UPDATE user_mfa
+            SET failed_attempts = $2::int,
+                locked_until = CASE WHEN $3::boolean THEN now() + make_interval(mins => $4::int) ELSE locked_until END
+          WHERE user_id = $1`,
+        [userId, lock ? 0 : failures, lock, MFA_LOCKOUT_MINUTES],
+      );
+      return "wrong" as const;
+    });
+
+    if (outcome === "ok") return;
+    if (outcome === "not_enrolled") {
+      throw new ForbiddenException({
+        message: "Turn on the authenticator app before you move money.",
+        code: "mfa_enrolment_required",
+      });
+    }
+    if (outcome === "no_code") {
+      throw new UnauthorizedException({
+        message: "Enter the code from your authenticator app.",
+        code: "mfa_code_required",
+      });
+    }
+    if (outcome === "locked") {
+      throw new UnauthorizedException({ message: MFA_LOCKED, code: "mfa_locked" });
+    }
+    throw new UnauthorizedException({ message: WRONG_CODE, code: "mfa_code_wrong" });
   }
 
   /** After the password is right: a short-lived, single-use token that carries the sign-in to step two. */

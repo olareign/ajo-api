@@ -1,7 +1,9 @@
+import type { Type } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { inject } from "vitest";
 import { AppModule } from "../../src/app.module.js";
+import { AuthModule } from "../../src/auth/auth.module.js";
 import { configureApp } from "../../src/app/configure-app.js";
 import type { Env } from "../../src/config/env.js";
 import { ENV } from "../../src/config/env.module.js";
@@ -20,9 +22,13 @@ export function testEnv(overrides: Record<string, string> = {}): Record<string, 
   };
 }
 
-/** Migrates the shared database and boots the real AppModule with production hardening. */
+/**
+ * Migrates the shared database and boots the real AppModule with production hardening.
+ * `probes` are throwaway controllers for routes that do not exist yet (e.g. a money action).
+ */
 export async function createTestApp(
   overrides: Record<string, string> = {},
+  probes: readonly Type<unknown>[] = [],
 ): Promise<NestExpressApplication> {
   const env = testEnv(overrides);
   const dataSource = await createDataSource(env).initialize();
@@ -30,7 +36,10 @@ export async function createTestApp(
   await dataSource.destroy();
 
   Object.assign(process.env, env);
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule, AuthModule],
+    controllers: [...probes],
+  }).compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({
     bodyParser: false,
     logger: false,

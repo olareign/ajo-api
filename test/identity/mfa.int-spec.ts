@@ -191,9 +191,14 @@ describe("a setup that was never confirmed", () => {
 describe("turning the second factor off", () => {
   it("needs the password and a current code", async () => {
     const user = await userWithMfa();
-    await authed("delete", "/api/v1/auth/mfa/totp", user.accessToken)
+    const wrongPassword = await authed("delete", "/api/v1/auth/mfa/totp", user.accessToken)
       .send({ password: "wrong password entirely", code: codeAt(user.secret, 30) })
       .expect(401);
+    expect(wrongPassword.body.code).toBe("password_wrong");
+    const wrongCode = await authed("delete", "/api/v1/auth/mfa/totp", user.accessToken)
+      .send({ password: user.password, code: "000000" })
+      .expect(401);
+    expect(wrongCode.body.code).toBe("mfa_code_wrong");
     await authed("delete", "/api/v1/auth/mfa/totp", user.accessToken)
       .send({ password: user.password, code: codeAt(user.secret, 30) })
       .expect(204);

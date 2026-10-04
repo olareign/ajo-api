@@ -9,6 +9,7 @@ import { AuthController } from "./auth.controller.js";
 import { AuthGuard } from "./auth.guard.js";
 import { MfaController } from "./mfa.controller.js";
 import { MfaService } from "./mfa.service.js";
+import { MoneyActionGuard } from "./money-action.guard.js";
 import { SessionService } from "./session.service.js";
 import { Totp } from "./totp.js";
 
@@ -28,9 +29,10 @@ import { Totp } from "./totp.js";
     },
     { provide: Totp, useValue: new Totp() },
     MfaService,
+    MoneyActionGuard,
     SessionService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService, AccessTokens],
+  exports: [SessionService, AccessTokens, MfaService, MoneyActionGuard],
 })
 export class AuthModule {}
