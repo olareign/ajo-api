@@ -218,9 +218,9 @@ describe("one inbox cannot be flooded", () => {
     expect(mailer.lastTo(email)).toBeDefined();
   });
 
-  it("stops at five a day, and starts again after a day", async () => {
+  it("stops at ten a day, and starts again after a day", async () => {
     const { email } = await createVerifiedUser(app);
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       await requestLink(email);
       await waitOutCooldown(email, 2);
     }
