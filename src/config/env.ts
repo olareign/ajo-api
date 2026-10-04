@@ -82,6 +82,11 @@ const schema = z
      * which drive it by hand).
      */
     SWEEP_SECONDS: z.coerce.number().int().min(0).max(3600).optional(),
+    /**
+     * What taking savings out of a plan early costs, in hundredths of a percent of what was saved
+     * (100 = 1%). 0, the default, charges nothing. A business decision, so it is a setting.
+     */
+    EARLY_WITHDRAWAL_PENALTY_BPS: z.coerce.number().int().min(0).max(2000).default(0),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */

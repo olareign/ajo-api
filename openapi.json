@@ -852,6 +852,96 @@
         ]
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "NotificationsController_readAll",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "operationId": "NotificationsController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/payments/fund": {
       "post": {
         "operationId": "PaymentsController_fund",
@@ -1183,6 +1273,315 @@
         },
         "tags": [
           "webhooks"
+        ]
+      }
+    },
+    "/api/v1/savings/preview": {
+      "post": {
+        "operationId": "SavingsController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings": {
+      "post": {
+        "operationId": "SavingsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      },
+      "get": {
+        "operationId": "SavingsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlansResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings/{id}": {
+      "get": {
+        "operationId": "SavingsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings/{id}/pause": {
+      "post": {
+        "operationId": "SavingsController_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings/{id}/resume": {
+      "post": {
+        "operationId": "SavingsController_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings/{id}/topup": {
+      "post": {
+        "operationId": "SavingsController_topUp",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
+        ]
+      }
+    },
+    "/api/v1/savings/{id}/withdraw": {
+      "post": {
+        "operationId": "SavingsController_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarlyWithdrawDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetailResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "savings"
         ]
       }
     },
@@ -1804,6 +2203,69 @@
           "code"
         ]
       },
+      "NotificationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "link": {
+            "type": "object",
+            "nullable": true,
+            "description": "An in-app path to open"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "readAt": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "createdAt",
+          "readAt"
+        ]
+      },
+      "NotificationsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "next": {
+            "type": "object",
+            "nullable": true,
+            "description": "Pass as `before` for the next page"
+          },
+          "unread": {
+            "type": "number",
+            "description": "How many are unread, across every page"
+          }
+        },
+        "required": [
+          "items",
+          "next",
+          "unread"
+        ]
+      },
       "FundDto": {
         "type": "object",
         "properties": {
@@ -2054,6 +2516,453 @@
         "required": [
           "bankCode",
           "accountNumber"
+        ]
+      },
+      "PlanDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Rent"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units per debit, e.g. 500000 for ₦5,000"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          },
+          "totalDebits": {
+            "type": "number",
+            "description": "How many debits in all",
+            "example": 12
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-01",
+            "description": "The day of the first debit"
+          },
+          "topupFromBank": {
+            "type": "boolean",
+            "description": "Collect any shortfall from the bank under auto-debit when the wallet is short"
+          }
+        },
+        "required": [
+          "name",
+          "amount",
+          "frequency",
+          "totalDebits",
+          "startDate"
+        ]
+      },
+      "PreviewResponse": {
+        "type": "object",
+        "properties": {
+          "dates": {
+            "example": [
+              "2026-11-01",
+              "2026-11-08"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2027-01-24"
+          }
+        },
+        "required": [
+          "dates",
+          "total",
+          "endDate"
+        ]
+      },
+      "NextDebitResponse": {
+        "type": "object",
+        "properties": {
+          "dueOn": {
+            "type": "string",
+            "example": "2026-11-01"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          }
+        },
+        "required": [
+          "dueOn",
+          "amount"
+        ]
+      },
+      "DebitResponse": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "number"
+          },
+          "dueOn": {
+            "type": "string",
+            "example": "2026-11-01"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "paid",
+              "failed",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "seq",
+          "dueOn",
+          "status"
+        ]
+      },
+      "HistoryResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "savings_debit, savings_topup, savings_maturity or savings_early_withdrawal"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ],
+            "description": "Into the plan, or out of it"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "direction",
+          "amount",
+          "createdAt"
+        ]
+      },
+      "PlanDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          },
+          "amount": {
+            "description": "Each debit",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "totalDebits": {
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-01"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2027-01-24",
+            "description": "The day of the last scheduled debit"
+          },
+          "saved": {
+            "description": "What is in the plan now, from the ledger",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "target": {
+            "description": "Every debit added up: the goal",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "paidDebits": {
+            "type": "number"
+          },
+          "failedDebits": {
+            "type": "number"
+          },
+          "nextDebit": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NextDebitResponse"
+              }
+            ]
+          },
+          "topupFromBank": {
+            "type": "boolean"
+          },
+          "payout": {
+            "nullable": true,
+            "description": "What came back to the wallet",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "penalty": {
+            "description": "What an early withdrawal cost",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "closedAt": {
+            "type": "object",
+            "nullable": true
+          },
+          "schedule": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebitResponse"
+            }
+          },
+          "history": {
+            "description": "Newest first, up to 50",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryResponse"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "frequency",
+          "amount",
+          "totalDebits",
+          "startDate",
+          "endDate",
+          "saved",
+          "target",
+          "paidDebits",
+          "failedDebits",
+          "nextDebit",
+          "topupFromBank",
+          "payout",
+          "penalty",
+          "createdAt",
+          "closedAt",
+          "schedule",
+          "history"
+        ]
+      },
+      "PlanResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ]
+          },
+          "amount": {
+            "description": "Each debit",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "totalDebits": {
+            "type": "number"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-11-01"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2027-01-24",
+            "description": "The day of the last scheduled debit"
+          },
+          "saved": {
+            "description": "What is in the plan now, from the ledger",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "target": {
+            "description": "Every debit added up: the goal",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "paidDebits": {
+            "type": "number"
+          },
+          "failedDebits": {
+            "type": "number"
+          },
+          "nextDebit": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NextDebitResponse"
+              }
+            ]
+          },
+          "topupFromBank": {
+            "type": "boolean"
+          },
+          "payout": {
+            "nullable": true,
+            "description": "What came back to the wallet",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "penalty": {
+            "description": "What an early withdrawal cost",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MoneyResponse"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "closedAt": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "frequency",
+          "amount",
+          "totalDebits",
+          "startDate",
+          "endDate",
+          "saved",
+          "target",
+          "paidDebits",
+          "failedDebits",
+          "nextDebit",
+          "topupFromBank",
+          "payout",
+          "penalty",
+          "createdAt",
+          "closedAt"
+        ]
+      },
+      "PlansResponse": {
+        "type": "object",
+        "properties": {
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanResponse"
+            }
+          }
+        },
+        "required": [
+          "plans"
+        ]
+      },
+      "TopUpDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units to add from the wallet now"
+          }
+        },
+        "required": [
+          "amount"
+        ]
+      },
+      "EarlyWithdrawDto": {
+        "type": "object",
+        "properties": {
+          "pin": {
+            "type": "string",
+            "description": "The 6-digit transaction PIN"
+          }
+        },
+        "required": [
+          "pin"
         ]
       },
       "RailsConnected": {
