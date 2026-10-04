@@ -77,6 +77,12 @@ const schema = z
     /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
     PAYMENTS_FAKE: flag.default(false),
     /**
+     * Approves everyone's identity check without the checks (tier 1), for as long as the real
+     * checks are pended. A switch: false (the default) turns it off again. It cannot be on beside
+     * a live payment key, so it can only ever sit next to test money.
+     */
+    KYC_AUTO_APPROVE: flag.default(false),
+    /**
      * How often, in seconds, the API runs its scheduled work: settling payments, taking saving-plan
      * debits, collecting circle rounds, sending queued emails. 0 turns it off (the default in tests,
      * which drive it by hand).
@@ -141,6 +147,9 @@ const schema = z
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }
       if (env.BOT_CHECK === "fake") require("BOT_CHECK", "stand-in not allowed in production");
+    }
+    if (env.KYC_AUTO_APPROVE && env.PAYSTACK_SECRET_KEY?.startsWith("sk_live_")) {
+      require("KYC_AUTO_APPROVE", "must be off while a live payment key is set");
     }
     if (env.NODE_ENV === "production" && env.PAYMENTS_FAKE) {
       require("PAYMENTS_FAKE", "stand-in not allowed in production");

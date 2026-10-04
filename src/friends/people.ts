@@ -6,12 +6,17 @@ import { normalizeUsername, isValidUsername } from "../identity/username-policy.
 export type Tx = Parameters<typeof sql>[0];
 
 /**
- * SQL that is true for a person whose identity checks are all approved. Written once, so "only
- * verified people can be found" means the same thing everywhere it is asked.
+ * SQL that is true for a person who counts as verified: all their identity checks approved, or
+ * approved by hand (`users.kyc_override`), or approved with everyone (`autoApprove`, the
+ * KYC_AUTO_APPROVE setting). A hold (`denied`) beats all of these. It is the same rule as
+ * `resolveKyc`, written once, so "only verified people can be found" means the same thing here as
+ * it does at the money gate.
  */
-export const approvedSql = (alias: string): string =>
-  `(SELECT count(*) FROM kyc_steps ks WHERE ks.user_id = ${alias}.id AND ks.status = 'approved'
-       AND ks.step IN (${REQUIRED_STEPS.map((s) => `'${s}'`).join(", ")})) = ${REQUIRED_STEPS.length}`;
+export const approvedSql = (alias: string, autoApprove: boolean): string =>
+  `(${alias}.kyc_override IS DISTINCT FROM 'denied' AND (
+      ${alias}.kyc_override = 'approved' OR ${autoApprove ? "true" : "false"} OR
+      (SELECT count(*) FROM kyc_steps ks WHERE ks.user_id = ${alias}.id AND ks.status = 'approved'
+         AND ks.step IN (${REQUIRED_STEPS.map((s) => `'${s}'`).join(", ")})) = ${REQUIRED_STEPS.length}))`;
 
 /** True when either person has blocked the other. */
 export const blockedSql = (a: string, b: string): string =>
@@ -47,14 +52,19 @@ export type Person = {
  * not verified, suspended, blocked either way) is the same answer, so it cannot be used to learn
  * who has blocked whom or who is on the app.
  */
-export async function reachable(tx: Tx, me: string, rawUsername: string): Promise<Person> {
+export async function reachable(
+  tx: Tx,
+  me: string,
+  rawUsername: string,
+  autoApprove: boolean,
+): Promise<Person> {
   const username = normalizeUsername(rawUsername);
   const [person] = isValidUsername(username)
     ? await sql<Person>(
         tx,
         `SELECT u.id, u.username::text AS username, u.display_name FROM users u
           WHERE u.username = $1 AND u.status = 'active' AND u.id <> $2
-            AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$2::uuid")}`,
+            AND ${approvedSql("u", autoApprove)} AND NOT ${blockedSql("u.id", "$2::uuid")}`,
         [username, me],
       )
     : [];

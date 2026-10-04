@@ -1,5 +1,7 @@
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import type { Env } from "../config/env.js";
+import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { normalizeUsername } from "../identity/username-policy.js";
 import { coded } from "../payments/payment-intents.js";
@@ -15,7 +17,10 @@ export type ReportReason = (typeof REPORT_REASONS)[number];
  */
 @Injectable()
 export class Safety {
-  constructor(private readonly db: DataSource) {}
+  constructor(
+    private readonly db: DataSource,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   async block(me: string, username: string): Promise<void> {
     await this.db.transaction(async (tx) => {
@@ -64,17 +69,19 @@ export class Safety {
     details?: string,
   ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const them = await reachable(tx, me, username).catch(async (error) => {
-        // You can report someone you have blocked.
-        const [blocked] = await sql<{ id: string }>(
-          tx,
-          `SELECT u.id FROM users u JOIN blocks b ON b.blocked_id = u.id
+      const them = await reachable(tx, me, username, this.env.KYC_AUTO_APPROVE).catch(
+        async (error) => {
+          // You can report someone you have blocked.
+          const [blocked] = await sql<{ id: string }>(
+            tx,
+            `SELECT u.id FROM users u JOIN blocks b ON b.blocked_id = u.id
             WHERE u.username = $1 AND b.blocker_id = $2`,
-          [normalizeUsername(username), me],
-        );
-        if (!blocked) throw error;
-        return { id: blocked.id };
-      });
+            [normalizeUsername(username), me],
+          );
+          if (!blocked) throw error;
+          return { id: blocked.id };
+        },
+      );
       await sql(
         tx,
         `INSERT INTO reports (reporter_id, reported_id, reason, details) VALUES ($1, $2, $3, $4)

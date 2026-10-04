@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { isValidUsername, normalizeUsername } from "../identity/username-policy.js";
+import type { Env } from "../config/env.js";
+import { ENV } from "../config/env.module.js";
 import { approvedSql, blockedSql } from "./people.js";
 import type { Relation } from "./friends.service.js";
 
@@ -46,7 +48,10 @@ const NATIONAL = `EXISTS (SELECT 1 FROM kyc_steps ns WHERE ns.user_id = u.id AND
  */
 @Injectable()
 export class Discovery {
-  constructor(private readonly db: DataSource) {}
+  constructor(
+    private readonly db: DataSource,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   async search(me: string, raw: string): Promise<Found[]> {
     const q = normalizeUsername(raw);
@@ -60,7 +65,7 @@ export class Discovery {
       `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
          FROM users u ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND u.status = 'active' AND u.username IS NOT NULL
-          AND u.username::text LIKE $2 ESCAPE '\\' AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}
+          AND u.username::text LIKE $2 ESCAPE '\\' AND ${approvedSql("u", this.env.KYC_AUTO_APPROVE)} AND NOT ${blockedSql("u.id", "$1::uuid")}
         ORDER BY (u.username::text = $3) DESC, u.username::text LIMIT ${SEARCH_LIMIT}`,
       [me, `${q.replaceAll("_", "\\_")}%`, q],
     );
@@ -73,7 +78,7 @@ export class Discovery {
       `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
          FROM users u ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND u.username = $2 AND u.status = 'active'
-          AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}`,
+          AND ${approvedSql("u", this.env.KYC_AUTO_APPROVE)} AND NOT ${blockedSql("u.id", "$1::uuid")}`,
       [me, username],
     );
     return row ?? null;
@@ -102,7 +107,7 @@ export class Discovery {
          FROM cand c JOIN users u ON u.id = c.uid
          ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND f.id IS NULL AND u.status = 'active' AND u.username IS NOT NULL
-          AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}
+          AND ${approvedSql("u", this.env.KYC_AUTO_APPROVE)} AND NOT ${blockedSql("u.id", "$1::uuid")}
         ORDER BY c.mutual DESC, u.username::text LIMIT ${SUGGESTION_LIMIT}`,
       [me],
     );
@@ -114,7 +119,7 @@ export class Discovery {
          JOIN users u ON u.id = CASE WHEN r.invitee_id = $1 THEN r.inviter_id ELSE r.invitee_id END
          ${JOIN_FRIENDSHIP}
         WHERE $1 IN (r.invitee_id, r.inviter_id) AND f.id IS NULL AND u.status = 'active'
-          AND u.username IS NOT NULL AND ${approvedSql("u")} AND NOT ${blockedSql("u.id", "$1::uuid")}
+          AND u.username IS NOT NULL AND ${approvedSql("u", this.env.KYC_AUTO_APPROVE)} AND NOT ${blockedSql("u.id", "$1::uuid")}
         ORDER BY r.created_at DESC LIMIT 10`,
       [me],
     );

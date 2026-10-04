@@ -2992,6 +2992,15 @@
               1,
               2
             ]
+          },
+          "kycVia": {
+            "type": "string",
+            "enum": [
+              "checks",
+              "waived",
+              "hold"
+            ],
+            "description": "Whether kycStatus comes from the checks, an approval without them, or a hold"
           }
         },
         "required": [
@@ -3006,7 +3015,8 @@
           "hasPin",
           "onboarded",
           "kycStatus",
-          "kycTier"
+          "kycTier",
+          "kycVia"
         ]
       },
       "UpdateProfileDto": {
@@ -3148,6 +3158,20 @@
             "items": {
               "$ref": "#/components/schemas/KycStepResponse"
             }
+          },
+          "via": {
+            "type": "string",
+            "enum": [
+              "checks",
+              "waived",
+              "hold"
+            ],
+            "description": "Where status comes from: the identity checks, an approval without them while they are not switched on (waived), or a hold on the account"
+          },
+          "note": {
+            "type": "object",
+            "nullable": true,
+            "description": "A sentence for the person when status is not from the checks"
           }
         },
         "required": [
@@ -3155,7 +3179,9 @@
           "country",
           "status",
           "tier",
-          "steps"
+          "steps",
+          "via",
+          "note"
         ]
       },
       "TokenPairResponse": {
