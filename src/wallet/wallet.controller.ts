@@ -4,7 +4,8 @@ import { DataSource } from "typeorm";
 import type { AccessClaims } from "../auth/access-tokens.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { KycService } from "../kyc/kyc.service.js";
-import { CONNECTED, currencyFor } from "../kyc/partners.js";
+import { currencyFor } from "../kyc/partners.js";
+import { PaymentProviders } from "../payments/providers/providers.service.js";
 import {
   RailsResponse,
   TransactionsQuery,
@@ -20,6 +21,7 @@ export class WalletController {
   constructor(
     private readonly db: DataSource,
     private readonly kyc: KycService,
+    private readonly providers: PaymentProviders,
   ) {}
 
   /** What this person can do with money today: their currency, whether they are approved, and which partners are live. */
@@ -35,7 +37,7 @@ export class WalletController {
       country,
       currency: currencyFor(country),
       kycApproved: await this.kyc.isApproved(auth.userId),
-      connected: { fund: CONNECTED.fund, mandate: CONNECTED.mandate, withdraw: CONNECTED.withdraw },
+      connected: this.providers.capabilities(country),
     };
   }
 

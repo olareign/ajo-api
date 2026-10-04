@@ -109,3 +109,33 @@ describe("moving money needs the authenticator app", () => {
     await request(http()).post("/api/v1/test/money").set("X-Forwarded-For", newIp()).expect(401);
   });
 });
+
+describe("money coming in needs the authenticator app, but not a fresh code each time", () => {
+  const moveIn = (token: string, code?: string) => {
+    const req = authed("post", "/api/v1/test/money/in", token);
+    return code === undefined ? req : req.set("X-Ajo-Mfa-Code", code);
+  };
+
+  it("is refused until the app is turned on", async () => {
+    const user = await signedIn();
+    const res = await moveIn(user.accessToken).expect(403);
+    expect(res.body.code).toBe("mfa_enrolment_required");
+  });
+
+  it("goes through once the app is on, with no code, as often as needed", async () => {
+    const user = await withAuthenticator();
+    await moveIn(user.accessToken).expect(200);
+    await moveIn(user.accessToken).expect(200);
+  });
+
+  it("does not count a wrong code that nobody needed to send", async () => {
+    const user = await withAuthenticator();
+    for (let i = 0; i < 12; i++) await moveIn(user.accessToken, "000000").expect(200);
+    // The lockout that protects money going out is untouched.
+    await move(user.accessToken, codeAt(user.secret, 30)).expect(200);
+  });
+
+  it("still needs a signed-in session", async () => {
+    await request(http()).post("/api/v1/test/money/in").set("X-Forwarded-For", newIp()).expect(401);
+  });
+});

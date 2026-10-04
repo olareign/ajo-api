@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { randomBytes, randomUUID } from "node:crypto";
+import * as OTPAuth from "otpauth";
 import request from "supertest";
 import { DataSource } from "typeorm";
 import { LedgerService } from "../../src/ledger/ledger.service.js";
@@ -7,6 +8,13 @@ import { signFakeWebhook, type FakeProvider } from "../../src/payments/providers
 import type { ProviderEvent } from "../../src/payments/providers/provider.port.js";
 import { PaymentProviders } from "../../src/payments/providers/providers.service.js";
 import { createVerifiedUser, newIp } from "../support/users.js";
+
+export const codeAt = (secret: string, offsetSeconds = 0) =>
+  new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 }).generate({
+    timestamp: Date.now() + offsetSeconds * 1000,
+  });
+
+export const PIN = "493817";
 
 /** Everything a payments test needs, built once per test file around a running app. */
 export function paymentsHarness(app: NestExpressApplication) {
@@ -21,6 +29,57 @@ export function paymentsHarness(app: NestExpressApplication) {
     const [{ id }] = await db.query("SELECT id FROM users WHERE email = $1", [email]);
     await db.query("UPDATE users SET country = $2 WHERE id = $1", [id, country]);
     return { id: id as string, email, currency: country === "NG" ? "NGN" : "GBP" };
+  }
+
+  /**
+   * Someone who has everything the money routes ask for: signed in, a country, a PIN, identity checks
+   * approved (written straight to the database, since a partner decides that), and the authenticator on.
+   */
+  async function ready(
+    country: "NG" | "GB" = "NG",
+    options: { mfa?: boolean; kyc?: boolean } = {},
+  ) {
+    const { email, password } = await createVerifiedUser(app);
+    const login = await request(http())
+      .post("/api/v1/auth/login")
+      .set("X-Forwarded-For", newIp())
+      .send({ email, password })
+      .expect(200);
+    const token = login.body.accessToken as string;
+    const call = (method: "get" | "post" | "put" | "delete", path: string) =>
+      request(http())
+        [method](`/api/v1${path}`)
+        .set("Authorization", `Bearer ${token}`)
+        .set("X-Forwarded-For", newIp());
+    const [{ id }] = await db.query("SELECT id FROM users WHERE email = $1", [email]);
+    await call("put", "/me/profile").send({ country, goal: "both" }).expect(204);
+    await call("put", "/me/username")
+      .send({ username: `u${randomBytes(6).toString("hex")}` })
+      .expect(204);
+    await call("put", "/me/pin").send({ pin: PIN }).expect(204);
+    if (options.kyc !== false) {
+      for (const step of ["id", "selfie", "address", "location", "bank"]) {
+        await db.query(
+          `INSERT INTO kyc_steps (user_id, step, status) VALUES ($1, $2, 'approved')`,
+          [id, step],
+        );
+      }
+    }
+    let secret: string | undefined;
+    if (options.mfa !== false) {
+      secret = (await call("post", "/auth/mfa/totp").expect(200)).body.secret as string;
+      await call("post", "/auth/mfa/totp/confirm")
+        .send({ code: codeAt(secret) })
+        .expect(200);
+    }
+    return {
+      id: id as string,
+      email,
+      token,
+      secret,
+      currency: country === "NG" ? "NGN" : "GBP",
+      call,
+    };
   }
 
   const reference = (prefix: string) => `${prefix}_${randomBytes(12).toString("hex")}`;
@@ -127,6 +186,7 @@ export function paymentsHarness(app: NestExpressApplication) {
     fake,
     http,
     person,
+    ready,
     reference,
     giveMoney,
     balance,
