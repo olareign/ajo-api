@@ -25,6 +25,6 @@ import { UsernameService } from "./username.service.js";
     DevicesService,
     TrustedDevicesService,
   ],
-  exports: [PasswordHasher, EmailVerification, DevicesService, TrustedDevicesService],
+  exports: [PasswordHasher, EmailVerification, DevicesService, TrustedDevicesService, PinService],
 })
 export class IdentityModule {}

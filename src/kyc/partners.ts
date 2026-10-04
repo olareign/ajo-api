@@ -1,15 +1,9 @@
 /**
- * Which partner capabilities have a live adapter behind them. Nothing is connected yet, so every
- * answer is no, and the screens show their locked state. Each flips when its adapter is registered
- * with real keys (E2 and E3 integration); the rest of the app reads these answers, so it needs no
- * change when that happens.
+ * Whether an identity partner is connected. Not yet, so every step shows its locked state. It flips
+ * when its adapter is registered with real keys (the owner has not chosen the identity tools yet).
+ * Payment partners are different: they are connected by their settings, in PaymentProviders.
  */
-export const CONNECTED = {
-  identity: false,
-  fund: false,
-  mandate: false,
-  withdraw: false,
-} as const;
+export const CONNECTED = { identity: false } as const;
 
 export type Country = "NG" | "GB";
 

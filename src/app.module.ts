@@ -17,6 +17,7 @@ import { LedgerModule } from "./ledger/ledger.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
 import { RedisThrottlerStorage } from "./security/redis-throttler.storage.js";
+import { PaymentsModule } from "./payments/payments.module.js";
 import { WalletModule } from "./wallet/wallet.module.js";
 import { ThrottlerStorageModule } from "./security/throttler-storage.module.js";
 
@@ -51,6 +52,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     AuthModule,
     KycModule,
     LedgerModule,
+    PaymentsModule,
     WalletModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

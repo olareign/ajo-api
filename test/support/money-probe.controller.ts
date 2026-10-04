@@ -10,4 +10,12 @@ export class MoneyProbeController {
   move(): { moved: true } {
     return { moved: true };
   }
+
+  /** Money coming in: the second lock must exist, but a fresh code is not asked for each time. */
+  @Post("in")
+  @HttpCode(200)
+  @MoneyAction({ code: false })
+  moveIn(): { moved: true } {
+    return { moved: true };
+  }
 }

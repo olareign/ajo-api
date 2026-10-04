@@ -61,6 +61,26 @@ const schema = z
      * Unset, they are ignored. At least 32 characters; generate with: openssl rand -base64 48
      */
     BFF_SHARED_SECRET: z.string().min(32).optional(),
+    /**
+     * Payment partners. With none set, money screens show "not switched on" and nothing can move.
+     * Paystack serves Nigeria (card, transfer, USSD, direct debit, payouts). The UK has no partner
+     * yet. Use test keys until the business is verified.
+     */
+    PAYSTACK_SECRET_KEY: z
+      .string()
+      .regex(
+        /^sk_(test|live)_[A-Za-z0-9]+$/,
+        "must be a Paystack secret key (sk_test_… or sk_live_…)",
+      )
+      .optional(),
+    PAYSTACK_BASE_URL: urlWithScheme(["https", "http"]).default("https://api.paystack.co"),
+    /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
+    PAYMENTS_FAKE: flag.default(false),
+    /**
+     * How often, in seconds, the API retries held partner messages and settles payments that sat
+     * pending. 0 turns it off (the default in tests, which drive it by hand).
+     */
+    PAYMENT_SWEEP_SECONDS: z.coerce.number().int().min(0).max(3600).optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -73,6 +93,7 @@ const schema = z
   })
   .transform((env) => ({
     ...env,
+    PAYMENT_SWEEP_SECONDS: env.PAYMENT_SWEEP_SECONDS ?? (env.NODE_ENV === "test" ? 0 : 60),
     DATABASE_SSL: env.DATABASE_SSL ?? env.NODE_ENV === "production",
     WEB_APP_URL: env.WEB_APP_URL ?? (env.NODE_ENV === "production" ? "" : "http://localhost:3000"),
     JWT_SECRET: env.JWT_SECRET ?? (env.NODE_ENV === "production" ? "" : DEV_JWT_SECRET),
@@ -102,6 +123,9 @@ const schema = z
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }
       if (env.BOT_CHECK === "fake") require("BOT_CHECK", "stand-in not allowed in production");
+    }
+    if (env.NODE_ENV === "production" && env.PAYMENTS_FAKE) {
+      require("PAYMENTS_FAKE", "stand-in not allowed in production");
     }
     if (env.BOT_CHECK === "turnstile" && !env.TURNSTILE_SECRET_KEY) {
       require("TURNSTILE_SECRET_KEY", "required when BOT_CHECK=turnstile");

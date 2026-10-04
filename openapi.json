@@ -852,6 +852,340 @@
         ]
       }
     },
+    "/api/v1/payments/fund": {
+      "post": {
+        "operationId": "PaymentsController_fund",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/withdraw": {
+      "post": {
+        "operationId": "PaymentsController_withdraw",
+        "parameters": [
+          {
+            "name": "x-ajo-mfa-code",
+            "in": "header",
+            "description": "The current 6-digit code from the authenticator app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/mandate": {
+      "get": {
+        "operationId": "PaymentsController_mandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Null when none was ever started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "post": {
+        "operationId": "PaymentsController_createMandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "delete": {
+        "operationId": "PaymentsController_cancelMandate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MandateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/banks": {
+      "get": {
+        "operationId": "PaymentsController_banks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BanksResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/payout-account": {
+      "get": {
+        "operationId": "PaymentsController_payoutAccount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Null when none is set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutAccountResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "put": {
+        "operationId": "PaymentsController_setPayoutAccount",
+        "parameters": [
+          {
+            "name": "x-ajo-mfa-code",
+            "in": "header",
+            "description": "The current 6-digit code from the authenticator app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutAccountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/{id}": {
+      "get": {
+        "operationId": "PaymentsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/webhooks/{provider}": {
+      "post": {
+        "operationId": "WebhooksController_receive",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored. The body says how many events it held."
+          }
+        },
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
     "/api/v1/wallet/rails": {
       "get": {
         "operationId": "WalletController_rails",
@@ -1470,6 +1804,258 @@
           "code"
         ]
       },
+      "FundDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units as a string, e.g. 500000 for ₦5,000"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "card",
+              "transfer",
+              "ussd",
+              "direct_debit"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "method"
+        ]
+      },
+      "MoneyResponse": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units (kobo, pence) as a string"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "NGN",
+              "GBP"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ]
+      },
+      "ActionResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "redirect"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "url"
+        ]
+      },
+      "PaymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "funding",
+              "withdrawal"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "pending",
+              "succeeded",
+              "failed",
+              "reversed"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "card",
+              "transfer",
+              "ussd",
+              "direct_debit",
+              "bank_account"
+            ]
+          },
+          "amount": {
+            "$ref": "#/components/schemas/MoneyResponse"
+          },
+          "action": {
+            "nullable": true,
+            "description": "Where the person goes next to pay",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActionResponse"
+              }
+            ]
+          },
+          "failureReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "method",
+          "amount",
+          "action",
+          "failureReason",
+          "createdAt"
+        ]
+      },
+      "WithdrawDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units as a string, e.g. 500000 for ₦5,000"
+          },
+          "pin": {
+            "type": "string",
+            "description": "The 6-digit transaction PIN"
+          }
+        },
+        "required": [
+          "amount",
+          "pin"
+        ]
+      },
+      "MandateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "action": {
+            "nullable": true,
+            "description": "Where the person goes to give their permission",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ActionResponse"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "action",
+          "createdAt"
+        ]
+      },
+      "BankResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "058"
+          },
+          "name": {
+            "type": "string",
+            "example": "GTBank"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "BanksResponse": {
+        "type": "object",
+        "properties": {
+          "banks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BankResponse"
+            }
+          }
+        },
+        "required": [
+          "banks"
+        ]
+      },
+      "PayoutAccountResponse": {
+        "type": "object",
+        "properties": {
+          "bankCode": {
+            "type": "string"
+          },
+          "bankName": {
+            "type": "string"
+          },
+          "last4": {
+            "type": "string",
+            "description": "The last four digits, for recognising it"
+          },
+          "accountName": {
+            "type": "string",
+            "description": "The name the bank holds the account under"
+          }
+        },
+        "required": [
+          "bankCode",
+          "bankName",
+          "last4",
+          "accountName"
+        ]
+      },
+      "PayoutAccountDto": {
+        "type": "object",
+        "properties": {
+          "bankCode": {
+            "type": "string",
+            "example": "058",
+            "description": "The bank's code"
+          },
+          "accountNumber": {
+            "type": "string",
+            "example": "0123456789"
+          }
+        },
+        "required": [
+          "bankCode",
+          "accountNumber"
+        ]
+      },
       "RailsConnected": {
         "type": "object",
         "properties": {
@@ -1527,24 +2113,6 @@
           "currency",
           "kycApproved",
           "connected"
-        ]
-      },
-      "MoneyResponse": {
-        "type": "object",
-        "properties": {
-          "amount": {
-            "type": "string",
-            "description": "Whole number in the currency's smallest unit (kobo, pence, cents)",
-            "example": "250000"
-          },
-          "currency": {
-            "type": "string",
-            "example": "NGN"
-          }
-        },
-        "required": [
-          "amount",
-          "currency"
         ]
       },
       "WalletResponse": {

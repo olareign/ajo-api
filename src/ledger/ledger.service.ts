@@ -23,14 +23,25 @@ function requestHash(posting: Posting): string {
 export class LedgerService {
   constructor(private readonly db: DataSource) {}
 
+  /** A read on the caller's own connection when it has one, otherwise on any. */
+  private read<T>(within: Tx | undefined, text: string, params: unknown[]): Promise<T[]> {
+    return within ? sql<T>(within, text, params) : this.db.query<T[]>(text, params);
+  }
+
   /** The one account for this owner, currency and kind; created on first use. */
-  userAccount(userId: string, kind: AccountKind, currency: string, ref?: string): Promise<string> {
-    return this.account("user", userId, kind, currency, ref);
+  userAccount(
+    userId: string,
+    kind: AccountKind,
+    currency: string,
+    ref?: string,
+    within?: Tx,
+  ): Promise<string> {
+    return this.account("user", userId, kind, currency, ref, within);
   }
 
   /** Accounts the platform itself holds: partner settlement, fees, group pots, suspense. */
-  systemAccount(kind: AccountKind, currency: string, ref?: string): Promise<string> {
-    return this.account("system", null, kind, currency, ref);
+  systemAccount(kind: AccountKind, currency: string, ref?: string, within?: Tx): Promise<string> {
+    return this.account("system", null, kind, currency, ref, within);
   }
 
   private async account(
@@ -39,10 +50,13 @@ export class LedgerService {
     kind: AccountKind,
     currency: string,
     ref?: string,
+    within?: Tx,
   ): Promise<string> {
     if (!CURRENCY.test(currency))
       throw new PostingError("currency must be a 3-letter code such as NGN");
-    return this.db.transaction(async (tx) => {
+    // On the caller's own connection when given one: a handler that already holds a connection and
+    // asks for a second one can starve the pool when many run at once.
+    const run = async (tx: Tx) => {
       await sql(
         tx,
         `INSERT INTO ledger_accounts (owner_type, owner_id, currency, kind, ref)
@@ -57,7 +71,8 @@ export class LedgerService {
         [ownerType, ownerId, currency, kind, ref ?? ""],
       );
       return row!.id;
-    });
+    };
+    return within ? run(within) : this.db.transaction(run);
   }
 
   /** Credits minus debits, as a whole number in the currency's smallest unit. */
@@ -74,13 +89,18 @@ export class LedgerService {
    * Posts a balanced set of entries once. The same idempotency key with the same request returns the
    * original posting; with a different request it is refused. A person's account can never go below
    * zero: the accounts involved are locked in a fixed order, so simultaneous spends cannot overdraw.
+   *
+   * Pass the caller's own transaction as `within` to make the posting part of it: it then commits or
+   * rolls back with the caller's other writes (a payment's new status, say), never on its own.
    */
   async post(
     posting: Posting,
     extra: { reverses?: string; reason?: string } = {},
+    within?: Tx,
   ): Promise<PostResult> {
     const ids = [...new Set(posting.entries.map((e) => e.accountId))];
-    const accounts = await this.db.query<{ id: string; currency: string; owner_type: string }[]>(
+    const accounts = await this.read<{ id: string; currency: string; owner_type: string }>(
+      within,
       `SELECT id, currency, owner_type FROM ledger_accounts WHERE id = ANY($1::uuid[])`,
       [ids],
     );
@@ -88,7 +108,7 @@ export class LedgerService {
     const hash = requestHash(posting);
     const personal = new Set(accounts.filter((a) => a.owner_type === "user").map((a) => a.id));
 
-    return this.db.transaction(async (tx) => {
+    const run = async (tx: Tx): Promise<PostResult> => {
       const inserted = await sql<{ id: string }>(
         tx,
         `INSERT INTO ledger_transactions (type, idempotency_key, request_hash, reference, reverses, reason)
@@ -143,7 +163,8 @@ export class LedgerService {
         );
       }
       return { id: transactionId, replayed: false };
-    });
+    };
+    return within ? run(within) : this.db.transaction(run);
   }
 
   private async replay(tx: Tx, key: string, hash: string): Promise<PostResult> {
@@ -162,20 +183,26 @@ export class LedgerService {
   async reverse(
     transactionId: string,
     options: { idempotencyKey: string; reason: string },
+    within?: Tx,
   ): Promise<PostResult> {
-    const [original] = await this.db.query<{ id: string; type: string; reverses: string | null }[]>(
+    const [original] = await this.read<{ id: string; type: string; reverses: string | null }>(
+      within,
       `SELECT id, type, reverses FROM ledger_transactions WHERE id = $1`,
       [transactionId],
     );
     if (!original) throw new PostingError("no such transaction");
-    const [done] = await this.db.query<{ id: string }[]>(
+    const [done] = await this.read<{ id: string }>(
+      within,
       `SELECT id FROM ledger_transactions WHERE reverses = $1`,
       [transactionId],
     );
     if (done) throw new ConflictException("That transaction was already reversed.");
-    const rows = await this.db.query<
-      { account_id: string; direction: "debit" | "credit"; amount: string }[]
-    >(
+    const rows = await this.read<{
+      account_id: string;
+      direction: "debit" | "credit";
+      amount: string;
+    }>(
+      within,
       `SELECT account_id, direction, amount::text FROM ledger_entries WHERE transaction_id = $1 ORDER BY id`,
       [transactionId],
     );
@@ -191,6 +218,7 @@ export class LedgerService {
         })),
       },
       { reverses: transactionId, reason: options.reason },
+      within,
     );
   }
 }

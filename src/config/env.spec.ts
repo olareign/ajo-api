@@ -114,6 +114,50 @@ describe("adapter configuration", () => {
     expect(() => loadEnv({ ...prod, BOT_CHECK: "fake" })).toThrow(/BOT_CHECK/);
   });
 
+  it("refuses the stand-in payment partner in production, and accepts it elsewhere", () => {
+    expect(() => loadEnv({ ...prod, PAYMENTS_FAKE: "true" })).toThrow(/PAYMENTS_FAKE/);
+    expect(
+      loadEnv({
+        NODE_ENV: "development",
+        DATABASE_URL: "postgres://u@localhost/db",
+        REDIS_URL: "redis://localhost",
+        PAYMENTS_FAKE: "true",
+      }).PAYMENTS_FAKE,
+    ).toBe(true);
+  });
+
+  it("starts with no payment partner connected, and never asks for one", () => {
+    const env = loadEnv({ ...prod });
+    expect(env.PAYMENTS_FAKE).toBe(false);
+    expect(env.PAYSTACK_SECRET_KEY).toBeUndefined();
+  });
+
+  it("sweeps payments every minute by default, can be turned off, and stays quiet in tests", () => {
+    expect(loadEnv({ ...prod }).PAYMENT_SWEEP_SECONDS).toBe(60);
+    expect(loadEnv({ ...prod, PAYMENT_SWEEP_SECONDS: "0" }).PAYMENT_SWEEP_SECONDS).toBe(0);
+    expect(loadEnv({ ...prod, NODE_ENV: "test" }).PAYMENT_SWEEP_SECONDS).toBe(0);
+    expect(() => loadEnv({ ...prod, PAYMENT_SWEEP_SECONDS: "-1" })).toThrow(
+      /PAYMENT_SWEEP_SECONDS/,
+    );
+  });
+
+  it("only accepts a Paystack secret key that looks like one", () => {
+    expect(() => loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "pk_test_publickey" })).toThrow(
+      /PAYSTACK_SECRET_KEY/,
+    );
+    expect(loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "sk_test_abc123" }).PAYSTACK_SECRET_KEY).toBe(
+      "sk_test_abc123",
+    );
+  });
+
+  it("does not echo a payment secret in an error", () => {
+    try {
+      loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "pk_live_do-not-print-me" });
+    } catch (error) {
+      expect(String(error)).not.toContain("do-not-print-me");
+    }
+  });
+
   it("needs the Turnstile secret when Turnstile is the bot check, and never accepts it as blank", () => {
     expect(() => loadEnv({ ...prod, TURNSTILE_SECRET_KEY: undefined })).toThrow(
       /TURNSTILE_SECRET_KEY/,

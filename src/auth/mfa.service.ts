@@ -50,6 +50,20 @@ export class MfaService {
     return rows.length > 0;
   }
 
+  /** For money coming in: the second lock must exist; no code is asked for. */
+  async requireEnrolled(userId: string): Promise<void> {
+    const rows = await this.db.query<{ one: number }[]>(
+      `SELECT 1 AS one FROM user_mfa WHERE user_id = $1 AND confirmed_at IS NOT NULL`,
+      [userId],
+    );
+    if (rows.length === 0) {
+      throw new ForbiddenException({
+        message: "Turn on the authenticator app before you move money.",
+        code: "mfa_enrolment_required",
+      });
+    }
+  }
+
   /** Starts (or restarts) setup: a new secret, kept unconfirmed until a correct code proves it works. */
   async enrol(userId: string, email: string): Promise<{ secret: string; otpauthUri: string }> {
     const { secret, uri } = this.totp.createSecret(email);
