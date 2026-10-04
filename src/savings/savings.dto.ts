@@ -106,6 +106,11 @@ export class PlanResponse {
 }
 
 export class PlanDetailResponse extends PlanResponse {
+  @ApiProperty({
+    description:
+      "What ending the plan early costs, in hundredths of a percent of what was saved (0 = free)",
+  })
+  earlyWithdrawalPenaltyBps!: number;
   @ApiProperty({ type: [DebitResponse] }) schedule!: DebitResponse[];
   @ApiProperty({ type: [HistoryResponse], description: "Newest first, up to 50" })
   history!: HistoryResponse[];

@@ -224,6 +224,7 @@ export class Savings {
     );
     return {
       ...view(row),
+      earlyWithdrawalPenaltyBps: this.env.EARLY_WITHDRAWAL_PENALTY_BPS,
       schedule: schedule.map((d) => ({ seq: d.seq, dueOn: d.due_on, status: d.status })),
       history: history.map((h) => ({
         type: h.type,
