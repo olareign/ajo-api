@@ -4,6 +4,7 @@ import { sql } from "../database/sql.js";
 import { DevicesService, type DeviceSighting } from "../identity/devices.service.js";
 import { EmailVerification } from "../identity/email-verification.service.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
+import { TrustedDevicesService } from "../identity/trusted-devices.service.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { AccessTokens } from "./access-tokens.js";
 import { MfaService, type CodeInput } from "./mfa.service.js";
@@ -33,6 +34,9 @@ export type TokenPair = Readonly<{
   refreshToken: string;
 }>;
 
+/** What a second-step sign-in hands back: the tokens, and the device's secret if it was remembered. */
+export type MfaLoginResult = TokenPair & Readonly<{ deviceToken?: string }>;
+
 export type ClientContext = Readonly<{ ip?: string; userAgent?: string }>;
 
 /** A password alone is enough, or the person must finish with a second step. */
@@ -58,9 +62,15 @@ export class SessionService {
     @Inject(AccessTokens) private readonly accessTokens: AccessTokens,
     private readonly mfa: MfaService,
     private readonly devices: DevicesService,
+    private readonly trusted: TrustedDevicesService,
   ) {}
 
-  async login(email: string, password: string, client: ClientContext): Promise<LoginResult> {
+  async login(
+    email: string,
+    password: string,
+    client: ClientContext,
+    deviceToken?: string,
+  ): Promise<LoginResult> {
     // Committed outcome first, then any error, so failure counters are never rolled back.
     const outcome = await this.db.transaction(async (tx) => {
       // Row lock serialises concurrent guesses against one account.
@@ -98,7 +108,11 @@ export class SessionService {
         return { kind: "unverified", user, link } as const;
       }
 
-      if (await this.mfa.isEnabled(tx, user.id)) {
+      // A device that proved itself earlier (and was remembered) is not asked again; any other is.
+      if (
+        (await this.mfa.isEnabled(tx, user.id)) &&
+        !(await this.trusted.isTrusted(tx, user.id, deviceToken))
+      ) {
         return { kind: "mfa", token: await this.mfa.createChallenge(tx, user.id) } as const;
       }
       const { sessionId, refreshToken, device } = await this.createSession(tx, user.id, client);
@@ -125,11 +139,18 @@ export class SessionService {
     mfaToken: string,
     input: CodeInput,
     client: ClientContext,
-  ): Promise<TokenPair> {
+    trustDevice = false,
+  ): Promise<MfaLoginResult> {
     const userId = await this.mfa.completeChallenge(mfaToken, input);
-    const created = await this.db.transaction((tx) => this.createSession(tx, userId, client));
+    const created = await this.db.transaction(async (tx) => ({
+      ...(await this.createSession(tx, userId, client)),
+      deviceToken: trustDevice
+        ? await this.trusted.remember(tx, userId, client.userAgent)
+        : undefined,
+    }));
     void this.devices.alert(userId, created.device);
-    return this.tokenPair(userId, created.sessionId, created.refreshToken);
+    const pair = await this.tokenPair(userId, created.sessionId, created.refreshToken);
+    return created.deviceToken ? { ...pair, deviceToken: created.deviceToken } : pair;
   }
 
   /**
@@ -202,7 +223,9 @@ export class SessionService {
     );
   }
 
+  /** Also forgets every remembered device: someone who lost one should not be trusted on it. */
   async logoutAll(userId: string): Promise<void> {
+    await this.trusted.forgetAll(userId);
     await this.db.query(
       `UPDATE sessions SET revoked_at = now(), revoked_reason = 'logout_all'
         WHERE user_id = $1 AND revoked_at IS NULL`,

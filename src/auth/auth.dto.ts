@@ -1,6 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from "class-validator";
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from "class-validator";
 
 export class LoginDto {
   @ApiProperty()
@@ -13,6 +21,16 @@ export class LoginDto {
   @IsString()
   @Length(1, 1024)
   password!: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      "The secret of a device that was asked to be remembered; with it, a sign-in skips the authenticator code",
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{43}$/)
+  deviceToken?: string;
 }
 
 export class RefreshDto {
@@ -34,6 +52,13 @@ export class TokenPairResponse {
 
   @ApiProperty()
   refreshToken!: string;
+
+  @ApiProperty({
+    required: false,
+    description:
+      "Only when the sign-in asked to remember the device: keep it on the device and send it with later sign-ins",
+  })
+  deviceToken?: string;
 }
 
 export class MfaChallengeResponse {
@@ -61,6 +86,11 @@ export class LoginMfaDto {
   @IsString()
   @Length(5, 32)
   recoveryCode?: string;
+
+  @ApiProperty({ required: false, description: "Remember this device, so it is not asked again" })
+  @IsOptional()
+  @IsBoolean()
+  trustDevice?: boolean;
 }
 
 export class ConfirmMfaDto {
@@ -93,4 +123,10 @@ export class EnrolMfaResponse {
 export class RecoveryCodesResponse {
   @ApiProperty({ type: [String], description: "Shown once; each works one time" })
   recoveryCodes!: string[];
+
+  @ApiProperty({
+    required: false,
+    description: "The device that turned the app on is remembered: keep this secret on it",
+  })
+  deviceToken?: string;
 }

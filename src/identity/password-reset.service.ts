@@ -10,6 +10,7 @@ import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { passwordChangedEmail, passwordResetEmail } from "./emails.js";
 import { PasswordHasher } from "./password-hasher.js";
+import { TrustedDevicesService } from "./trusted-devices.service.js";
 import { checkPassword } from "./password-policy.js";
 import { INVALID_LINK } from "./sign-up.service.js";
 import { createOneTimeToken, hashToken } from "./tokens.js";
@@ -23,6 +24,7 @@ export class PasswordResetService {
   constructor(
     private readonly db: DataSource,
     private readonly hasher: PasswordHasher,
+    private readonly trusted: TrustedDevicesService,
     @Inject(BREACHED_PASSWORDS) private readonly breached: BreachedPasswords,
     @Inject(MAILER) private readonly mailer: Mailer,
     @Inject(ENV) private readonly env: Env,
@@ -118,6 +120,8 @@ export class PasswordResetService {
           WHERE user_id = $1 AND revoked_at IS NULL`,
         [link.user_id],
       );
+      // A new password means the old one may have been known to someone: no device stays trusted.
+      await this.trusted.forgetAllIn(tx, link.user_id);
       await sql(
         tx,
         `UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`,

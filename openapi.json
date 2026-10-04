@@ -1160,6 +1160,10 @@
           },
           "refreshToken": {
             "type": "string"
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "Only when the sign-in asked to remember the device: keep it on the device and send it with later sign-ins"
           }
         },
         "required": [
@@ -1196,6 +1200,10 @@
           },
           "password": {
             "type": "string"
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "The secret of a device that was asked to be remembered; with it, a sign-in skips the authenticator code"
           }
         },
         "required": [
@@ -1216,6 +1224,10 @@
           "recoveryCode": {
             "type": "string",
             "description": "One of the saved recovery codes"
+          },
+          "trustDevice": {
+            "type": "boolean",
+            "description": "Remember this device, so it is not asked again"
           }
         },
         "required": [
@@ -1271,6 +1283,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "deviceToken": {
+            "type": "string",
+            "description": "The device that turned the app on is remembered: keep this secret on it"
           }
         },
         "required": [
