@@ -34,6 +34,16 @@ export class SignUpDto {
   @IsString()
   @MaxLength(BOT_TOKEN_MAX_LENGTH)
   botToken?: string;
+
+  @ApiProperty({
+    required: false,
+    example: "K7M2QH9R",
+    description: "The code from a friend's invite link. A wrong one is ignored.",
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9]{8}$/)
+  invite?: string;
 }
 
 export class VerifyEmailDto {

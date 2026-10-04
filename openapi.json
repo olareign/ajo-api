@@ -852,6 +852,528 @@
         ]
       }
     },
+    "/api/v1/friends/search": {
+      "get": {
+        "operationId": "FriendsController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "The start of a username, at least 3 letters",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PersonResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/people/{username}": {
+      "get": {
+        "operationId": "FriendsController_person",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends": {
+      "get": {
+        "operationId": "FriendsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FriendsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/requests": {
+      "get": {
+        "operationId": "FriendsController_requests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      },
+      "post": {
+        "operationId": "FriendsController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/suggestions": {
+      "get": {
+        "operationId": "FriendsController_suggestions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/invite": {
+      "get": {
+        "operationId": "FriendsController_invite",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/requests/{username}/accept": {
+      "post": {
+        "operationId": "FriendsController_accept",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/requests/{username}/received": {
+      "delete": {
+        "operationId": "FriendsController_decline",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/requests/{username}": {
+      "delete": {
+        "operationId": "FriendsController_cancel",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/blocks": {
+      "get": {
+        "operationId": "FriendsController_blocks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BlockedResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      },
+      "post": {
+        "operationId": "FriendsController_block",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/blocks/{username}": {
+      "delete": {
+        "operationId": "FriendsController_unblock",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/reports": {
+      "post": {
+        "operationId": "FriendsController_report",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/{username}": {
+      "delete": {
+        "operationId": "FriendsController_remove",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/invites/{code}": {
+      "get": {
+        "operationId": "InvitesController_whose",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviterResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "friends"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "NotificationsController_list",
@@ -1721,6 +2243,11 @@
             "type": "string",
             "maxLength": 2048,
             "description": "Cloudflare Turnstile token from the sign-up form. Required when bot protection is on; single-use."
+          },
+          "invite": {
+            "type": "string",
+            "example": "K7M2QH9R",
+            "description": "The code from a friend's invite link. A wrong one is ignored."
           }
         },
         "required": [
@@ -2201,6 +2728,303 @@
         "required": [
           "password",
           "code"
+        ]
+      },
+      "PersonResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "friend",
+              "requested",
+              "incoming"
+            ],
+            "description": "Your relationship to them"
+          },
+          "mutualFriends": {
+            "type": "number",
+            "description": "Friends you have in common"
+          },
+          "tier": {
+            "type": "number",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "1 passport stamped; 2 with a national check too"
+          }
+        },
+        "required": [
+          "username",
+          "displayName",
+          "relation",
+          "mutualFriends",
+          "tier"
+        ]
+      },
+      "FriendResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "since": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "number",
+            "enum": [
+              1,
+              2
+            ]
+          }
+        },
+        "required": [
+          "username",
+          "displayName",
+          "since",
+          "tier"
+        ]
+      },
+      "FriendsResponse": {
+        "type": "object",
+        "properties": {
+          "friends": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FriendResponse"
+            }
+          }
+        },
+        "required": [
+          "friends"
+        ]
+      },
+      "RequestResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "number",
+            "enum": [
+              1,
+              2
+            ]
+          }
+        },
+        "required": [
+          "username",
+          "displayName",
+          "sentAt",
+          "tier"
+        ]
+      },
+      "RequestsResponse": {
+        "type": "object",
+        "properties": {
+          "incoming": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestResponse"
+            }
+          },
+          "outgoing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestResponse"
+            }
+          }
+        },
+        "required": [
+          "incoming",
+          "outgoing"
+        ]
+      },
+      "SuggestionResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "friend",
+              "requested",
+              "incoming"
+            ],
+            "description": "Your relationship to them"
+          },
+          "mutualFriends": {
+            "type": "number",
+            "description": "Friends you have in common"
+          },
+          "tier": {
+            "type": "number",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "1 passport stamped; 2 with a national check too"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "mutual",
+              "invited_you",
+              "you_invited"
+            ]
+          },
+          "mutualNames": {
+            "description": "Up to two of the friends you have in common",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "username",
+          "displayName",
+          "relation",
+          "mutualFriends",
+          "tier",
+          "reason",
+          "mutualNames"
+        ]
+      },
+      "InviteResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "K7M2QH9R"
+          },
+          "link": {
+            "type": "string",
+            "example": "https://app.example/join/K7M2QH9R"
+          }
+        },
+        "required": [
+          "code",
+          "link"
+        ]
+      },
+      "UsernameDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "ada_ola",
+            "description": "Their username, with or without the @"
+          }
+        },
+        "required": [
+          "username"
+        ]
+      },
+      "RelationResponse": {
+        "type": "object",
+        "properties": {
+          "relation": {
+            "type": "string",
+            "enum": [
+              "none",
+              "friend",
+              "requested",
+              "incoming"
+            ]
+          }
+        },
+        "required": [
+          "relation"
+        ]
+      },
+      "BlockedResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "blockedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "displayName",
+          "blockedAt"
+        ]
+      },
+      "ReportDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "ada_ola",
+            "description": "Their username, with or without the @"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "spam",
+              "harassment",
+              "fake_account",
+              "scam",
+              "other"
+            ]
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "username",
+          "reason"
+        ]
+      },
+      "InviterResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name only"
+          },
+          "username": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "username"
         ]
       },
       "NotificationResponse": {

@@ -124,7 +124,8 @@ describe("the email queue", () => {
 
       down = true;
       await notifications.notify(who.id, message({ email: true, title: "Hopeless" }));
-      for (let i = 0; i < MAX_EMAIL_ATTEMPTS + 2; i += 1) await notifications.sendQueuedEmails(5000);
+      for (let i = 0; i < MAX_EMAIL_ATTEMPTS + 2; i += 1)
+        await notifications.sendQueuedEmails(5000);
       const [row] = await t.db.query(
         "SELECT email_status, email_attempts FROM notifications WHERE user_id = $1 AND title = 'Hopeless'",
         [who.id],

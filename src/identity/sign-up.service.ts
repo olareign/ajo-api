@@ -16,6 +16,7 @@ import { BOT_CHECK, type BotCheck } from "../adapters/bot-check/bot-check.port.j
 import { MAILER, type Mailer } from "../adapters/mail/mailer.port.js";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
+import { recordReferral } from "../friends/referrals.js";
 import { accountExistsEmail } from "./emails.js";
 import { EmailVerification } from "./email-verification.service.js";
 import { PasswordHasher } from "./password-hasher.js";
@@ -50,6 +51,7 @@ export class SignUpService {
     password: string;
     displayName: string;
     botToken?: string;
+    invite?: string;
   }): Promise<void> {
     // First, before any hashing, lookup or network call about the password: a bot costs us nothing.
     const human = await this.botCheck.verify(input.botToken);
@@ -87,6 +89,7 @@ export class SignUpService {
         [input.email, passwordHash, input.displayName],
       );
       const userId = rows[0]?.id;
+      if (userId) await recordReferral(tx, userId, input.invite);
       return userId ? await this.verification.createLink(tx, userId) : null;
     });
 
