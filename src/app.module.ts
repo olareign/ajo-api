@@ -17,7 +17,10 @@ import { LedgerModule } from "./ledger/ledger.module.js";
 import { buildLoggerOptions } from "./logging/logger-options.js";
 import { REDIS_CLIENT, RedisModule } from "./redis/redis.module.js";
 import { RedisThrottlerStorage } from "./security/redis-throttler.storage.js";
+import { NotificationsModule } from "./notifications/notifications.module.js";
 import { PaymentsModule } from "./payments/payments.module.js";
+import { SchedulerModule } from "./scheduler/scheduler.module.js";
+import { SavingsModule } from "./savings/savings.module.js";
 import { WalletModule } from "./wallet/wallet.module.js";
 import { ThrottlerStorageModule } from "./security/throttler-storage.module.js";
 
@@ -33,6 +36,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
       useFactory: (env: Env) => ({ ...buildDataSourceOptions(env), autoLoadEntities: true }),
     }),
     RedisModule,
+    SchedulerModule,
     // BullMQ shares the app's Redis client (duplicating it for blocking commands).
     BullModule.forRootAsync({
       inject: [REDIS_CLIENT],
@@ -52,7 +56,9 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     AuthModule,
     KycModule,
     LedgerModule,
+    NotificationsModule,
     PaymentsModule,
+    SavingsModule,
     WalletModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

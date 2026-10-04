@@ -454,6 +454,72 @@ CREATE UNIQUE INDEX IF NOT EXISTS mandates_one_open_per_user ON mandates (user_i
 CREATE INDEX IF NOT EXISTS mandates_provider_idx ON mandates (provider, provider_id)
   WHERE provider_id IS NOT NULL;
 
+-- 1790900100000 CreateNotifications ---------------------------------------------------------
+-- Messages to a person: shown in the app and optionally emailed from a queue. The same message key
+-- for the same person is only ever saved once.
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  seq bigint GENERATED ALWAYS AS IDENTITY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  kind text NOT NULL CHECK (char_length(kind) BETWEEN 1 AND 64),
+  title text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 120),
+  body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 500),
+  link text CHECK (link IS NULL OR (char_length(link) <= 200 AND link LIKE '/%')),
+  dedupe_key text NOT NULL CHECK (char_length(dedupe_key) BETWEEN 1 AND 200),
+  email_status text NOT NULL DEFAULT 'none' CHECK (email_status IN ('none', 'pending', 'sent', 'failed')),
+  email_attempts integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  read_at timestamptz,
+  UNIQUE (user_id, dedupe_key)
+);
+CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, seq DESC);
+CREATE INDEX IF NOT EXISTS notifications_email_pending_idx ON notifications (created_at)
+  WHERE email_status = 'pending';
+
+-- 1790900110000 CreateSavings ----------------------------------------------------------------
+-- Solo saving plans and their scheduled debits. A plan's money sits in its own ledger account, so
+-- what is saved is always read from the ledger, never counted.
+CREATE TABLE IF NOT EXISTS savings_plans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
+  currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+  amount bigint NOT NULL CHECK (amount > 0),
+  frequency text NOT NULL CHECK (frequency IN ('daily', 'weekly', 'monthly')),
+  total_debits integer NOT NULL CHECK (total_debits BETWEEN 2 AND 366),
+  start_date date NOT NULL,
+  topup_from_bank boolean NOT NULL DEFAULT false,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed', 'cancelled')),
+  paused_at timestamptz,
+  closed_at timestamptz,
+  payout_amount bigint CHECK (payout_amount IS NULL OR payout_amount >= 0),
+  penalty_amount bigint NOT NULL DEFAULT 0 CHECK (penalty_amount >= 0),
+  idempotency_key text NOT NULL CHECK (char_length(idempotency_key) BETWEEN 8 AND 100),
+  request_hash char(64) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS savings_plans_user_idx ON savings_plans (user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS savings_debits (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL REFERENCES savings_plans (id) ON DELETE RESTRICT,
+  seq integer NOT NULL CHECK (seq >= 1),
+  due_on date NOT NULL,
+  status text NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'paid', 'failed', 'skipped')),
+  attempts integer NOT NULL DEFAULT 0,
+  next_attempt_at timestamptz NOT NULL,
+  pull_key text CHECK (char_length(pull_key) <= 120),
+  topup_intent_id uuid REFERENCES payment_intents (id) ON DELETE RESTRICT,
+  ledger_transaction_id uuid REFERENCES ledger_transactions (id),
+  paid_at timestamptz,
+  note text CHECK (char_length(note) <= 200),
+  UNIQUE (plan_id, seq)
+);
+CREATE INDEX IF NOT EXISTS savings_debits_due_idx ON savings_debits (next_attempt_at)
+  WHERE status = 'scheduled';
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -478,14 +544,16 @@ SELECT v.ts, v.name
     (1790900060000::bigint, 'AddLoginDevices1790900060000'),
     (1790900070000::bigint, 'AddTrustedDevices1790900070000'),
     (1790900080000::bigint, 'CreateKycSteps1790900080000'),
-    (1790900090000::bigint, 'CreatePayments1790900090000')
+    (1790900090000::bigint, 'CreatePayments1790900090000'),
+    (1790900100000::bigint, 'CreateNotifications1790900100000'),
+    (1790900110000::bigint, 'CreateSavings1790900110000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all fourteen migrations must be listed.
+-- `username` must be there (citext, nullable); and all sixteen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')

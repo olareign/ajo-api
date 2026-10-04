@@ -75,9 +75,13 @@ export class LedgerService {
     return within ? run(within) : this.db.transaction(run);
   }
 
-  /** Credits minus debits, as a whole number in the currency's smallest unit. */
-  async balance(accountId: string): Promise<string> {
-    const [row] = await this.db.query<{ balance: string }[]>(
+  /**
+   * Credits minus debits, as a whole number in the currency's smallest unit. Pass the caller's own
+   * transaction as `within` to read on its connection (and see its own earlier writes).
+   */
+  async balance(accountId: string, within?: Tx): Promise<string> {
+    const [row] = await this.read<{ balance: string }>(
+      within,
       `SELECT coalesce(sum(CASE direction WHEN 'credit' THEN amount ELSE -amount END), 0)::text AS balance
          FROM ledger_entries WHERE account_id = $1`,
       [accountId],

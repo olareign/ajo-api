@@ -115,6 +115,16 @@ export interface PaymentProvider {
     email: string;
     returnUrl: string;
   }): Promise<{ providerId: string | null; action: Action }>;
+  /**
+   * Collects money under a mandate the person already gave. The partner answers later (a webhook, or a
+   * status check on `reference`); a refusal here means nothing was collected.
+   */
+  chargeMandate(input: {
+    reference: string;
+    amount: string;
+    email: string;
+    authorizationCode: string;
+  }): Promise<{ providerId: string | null }>;
   cancelMandate(input: {
     providerId: string | null;
     providerMandateId: string | null;

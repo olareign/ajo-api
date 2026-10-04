@@ -77,10 +77,16 @@ const schema = z
     /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
     PAYMENTS_FAKE: flag.default(false),
     /**
-     * How often, in seconds, the API retries held partner messages and settles payments that sat
-     * pending. 0 turns it off (the default in tests, which drive it by hand).
+     * How often, in seconds, the API runs its scheduled work: settling payments, taking saving-plan
+     * debits, collecting circle rounds, sending queued emails. 0 turns it off (the default in tests,
+     * which drive it by hand).
      */
-    PAYMENT_SWEEP_SECONDS: z.coerce.number().int().min(0).max(3600).optional(),
+    SWEEP_SECONDS: z.coerce.number().int().min(0).max(3600).optional(),
+    /**
+     * What taking savings out of a plan early costs, in hundredths of a percent of what was saved
+     * (100 = 1%). 0, the default, charges nothing. A business decision, so it is a setting.
+     */
+    EARLY_WITHDRAWAL_PENALTY_BPS: z.coerce.number().int().min(0).max(2000).default(0),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -93,7 +99,7 @@ const schema = z
   })
   .transform((env) => ({
     ...env,
-    PAYMENT_SWEEP_SECONDS: env.PAYMENT_SWEEP_SECONDS ?? (env.NODE_ENV === "test" ? 0 : 60),
+    SWEEP_SECONDS: env.SWEEP_SECONDS ?? (env.NODE_ENV === "test" ? 0 : 60),
     DATABASE_SSL: env.DATABASE_SSL ?? env.NODE_ENV === "production",
     WEB_APP_URL: env.WEB_APP_URL ?? (env.NODE_ENV === "production" ? "" : "http://localhost:3000"),
     JWT_SECRET: env.JWT_SECRET ?? (env.NODE_ENV === "production" ? "" : DEV_JWT_SECRET),

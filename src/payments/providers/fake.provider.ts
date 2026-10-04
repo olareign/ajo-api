@@ -91,6 +91,19 @@ export class FakeProvider implements PaymentProvider {
     };
   }
 
+  async chargeMandate(input: {
+    reference: string;
+    amount: string;
+    email: string;
+    authorizationCode: string;
+  }) {
+    await this.record("chargeMandate", input);
+    if (this.behaviour.initialize === "reject")
+      throw new ProviderRejected("The partner refused it.");
+    if (this.behaviour.initialize === "unavailable") throw new ProviderUnavailable("timeout");
+    return { providerId: `fake_${input.reference}` };
+  }
+
   async verifyFunding(reference: string): Promise<VerifiedPayment> {
     await this.record("verifyFunding", reference);
     return (
