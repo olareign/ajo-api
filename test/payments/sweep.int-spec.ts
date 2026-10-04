@@ -21,11 +21,17 @@ beforeEach(async () => {
 });
 afterEach(async () => t.expectBooksBalance());
 
-const makeStale = (id: string) =>
-  t.db.query(
+const makeStale = async (id: string) => {
+  await t.db.query(
     "UPDATE payment_intents SET updated_at = now() - interval '10 minutes' WHERE id = $1",
     [id],
   );
+  // Other tests share this database and leave pending payments behind; a pass only looks at the oldest few.
+  await t.db.query(
+    "UPDATE payment_intents SET updated_at = now() WHERE status = 'pending' AND id <> $1",
+    [id],
+  );
+};
 
 describe("the scheduled sweep of payments", () => {
   it("settles a payment the partner confirmed but whose webhook never came, once, however many sweeps race", async () => {

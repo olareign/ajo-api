@@ -64,7 +64,7 @@ export const daysBetween = (from: string, to: string): number =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 
 /** The same day of a later month, or its last day when that month is shorter (31 January + 1 month = 28 February). */
-function addMonths(date: string, months: number): string {
+export function addMonths(date: string, months: number): string {
   const [y, m, day] = date.split("-").map(Number) as [number, number, number];
   const index = m - 1 + months;
   const year = y + Math.floor(index / 12);

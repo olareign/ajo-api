@@ -520,6 +520,194 @@ CREATE TABLE IF NOT EXISTS savings_debits (
 CREATE INDEX IF NOT EXISTS savings_debits_due_idx ON savings_debits (next_attempt_at)
   WHERE status = 'scheduled';
 
+-- 1790900120000 CreateFriends ----------------------------------------------------------------
+-- Friendships (one row per pair, lowest id first, so crossing requests can never make two), blocks,
+-- reports for the admin queue, invite links, and who invited whom.
+CREATE TABLE IF NOT EXISTS friendships (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  low_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  high_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  requester_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  responded_at timestamptz,
+  CHECK (low_id < high_id),
+  CHECK (requester_id IN (low_id, high_id)),
+  UNIQUE (low_id, high_id)
+);
+CREATE INDEX IF NOT EXISTS friendships_low_idx ON friendships (low_id, status);
+CREATE INDEX IF NOT EXISTS friendships_high_idx ON friendships (high_id, status);
+
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  blocked_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+CREATE INDEX IF NOT EXISTS blocks_blocked_idx ON blocks (blocked_id);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  reported_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  reason text NOT NULL CHECK (reason IN ('spam', 'harassment', 'fake_account', 'scam', 'other')),
+  details text CHECK (details IS NULL OR char_length(details) <= 500),
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'reviewed', 'dismissed')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (reporter_id <> reported_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_idx ON reports (reporter_id, reported_id)
+  WHERE status = 'open';
+CREATE INDEX IF NOT EXISTS reports_open_idx ON reports (created_at) WHERE status = 'open';
+
+CREATE TABLE IF NOT EXISTS invite_links (
+  user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  code text NOT NULL UNIQUE CHECK (code ~ '^[A-Z0-9]{8}$'),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS referrals (
+  invitee_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  inviter_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (invitee_id <> inviter_id)
+);
+CREATE INDEX IF NOT EXISTS referrals_inviter_idx ON referrals (inviter_id);
+
+-- 1790900130000 CreateGroups -----------------------------------------------------------------
+-- Èsúsú groups and the trust that goes with them. Money is never counted here: each round's pot is its
+-- own ledger account and each member's deposit sits in their own locked account.
+CREATE TABLE IF NOT EXISTS groups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  creator_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
+  community text CHECK (community IS NULL OR char_length(community) BETWEEN 1 AND 40),
+  currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+  contribution bigint NOT NULL CHECK (contribution > 0),
+  frequency text NOT NULL CHECK (frequency IN ('weekly', 'biweekly', 'monthly')),
+  size integer NOT NULL CHECK (size BETWEEN 3 AND 30),
+  start_date date NOT NULL,
+  time_zone text NOT NULL CHECK (char_length(time_zone) <= 40),
+  order_method text NOT NULL CHECK (order_method IN ('random', 'pick', 'join_order')),
+  visibility text NOT NULL CHECK (visibility IN ('private', 'public')),
+  invite_code text NOT NULL UNIQUE CHECK (invite_code ~ '^[A-Z0-9]{8}$'),
+  status text NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open', 'picking', 'running', 'completed', 'cancelled')),
+  deposit_base bigint NOT NULL CHECK (deposit_base >= 0),
+  deposit_early bigint NOT NULL CHECK (deposit_early >= 0),
+  fee_bps integer NOT NULL CHECK (fee_bps BETWEEN 0 AND 2000),
+  late_fee_bps integer NOT NULL CHECK (late_fee_bps BETWEEN 0 AND 2000),
+  grace_days integer NOT NULL CHECK (grace_days BETWEEN 0 AND 14),
+  pick_deadline timestamptz,
+  locked_at timestamptz,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  cancel_reason text CHECK (cancel_reason IS NULL OR char_length(cancel_reason) <= 200),
+  idempotency_key text NOT NULL CHECK (char_length(idempotency_key) BETWEEN 8 AND 100),
+  request_hash char(64) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (creator_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS groups_open_public_idx ON groups (start_date) WHERE status = 'open' AND visibility = 'public';
+CREATE INDEX IF NOT EXISTS groups_status_idx ON groups (status);
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  join_seq integer NOT NULL CHECK (join_seq >= 1),
+  spot integer CHECK (spot IS NULL OR spot >= 1),
+  deposit_required bigint NOT NULL DEFAULT 0 CHECK (deposit_required >= 0),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'left')),
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  left_at timestamptz,
+  PRIMARY KEY (group_id, user_id),
+  UNIQUE (group_id, join_seq)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS group_members_spot_idx ON group_members (group_id, spot) WHERE spot IS NOT NULL;
+CREATE INDEX IF NOT EXISTS group_members_user_idx ON group_members (user_id, status);
+CREATE TABLE IF NOT EXISTS group_draws (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  kind text NOT NULL CHECK (kind IN ('random', 'pick_leftover')),
+  seed text NOT NULL CHECK (seed ~ '^[0-9a-f]{64}$'),
+  input jsonb NOT NULL,
+  result jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS group_draws_group_idx ON group_draws (group_id);
+CREATE TABLE IF NOT EXISTS group_rounds (
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  round_no integer NOT NULL CHECK (round_no >= 1),
+  due_on date NOT NULL,
+  recipient_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'scheduled'
+    CHECK (status IN ('scheduled', 'paid_out', 'paid_out_short')),
+  payout_amount bigint CHECK (payout_amount IS NULL OR payout_amount >= 0),
+  fee_amount bigint CHECK (fee_amount IS NULL OR fee_amount >= 0),
+  paid_out_at timestamptz,
+  PRIMARY KEY (group_id, round_no)
+);
+CREATE TABLE IF NOT EXISTS group_contributions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  round_no integer NOT NULL,
+  member_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  amount bigint NOT NULL CHECK (amount > 0),
+  status text NOT NULL DEFAULT 'scheduled'
+    CHECK (status IN ('scheduled', 'paid', 'late', 'covered', 'missed')),
+  attempts integer NOT NULL DEFAULT 0,
+  next_attempt_at timestamptz NOT NULL,
+  pull_key text CHECK (char_length(pull_key) <= 120),
+  topup_intent_id uuid REFERENCES payment_intents (id) ON DELETE RESTRICT,
+  ledger_transaction_id uuid REFERENCES ledger_transactions (id),
+  paid_at timestamptz,
+  note text CHECK (char_length(note) <= 200),
+  FOREIGN KEY (group_id, round_no) REFERENCES group_rounds (group_id, round_no),
+  UNIQUE (group_id, round_no, member_id)
+);
+CREATE INDEX IF NOT EXISTS group_contributions_due_idx ON group_contributions (next_attempt_at) WHERE status = 'scheduled';
+CREATE TABLE IF NOT EXISTS trust_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  kind text NOT NULL CHECK (kind IN ('payment_on_time', 'payment_late', 'payment_missed', 'group_completed')),
+  group_id uuid REFERENCES groups (id) ON DELETE RESTRICT,
+  ref text NOT NULL CHECK (char_length(ref) BETWEEN 1 AND 120),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, ref)
+);
+CREATE INDEX IF NOT EXISTS trust_events_user_idx ON trust_events (user_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS defaulter_blocks (
+  user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  blocked_until timestamptz NOT NULL,
+  reason text NOT NULL CHECK (char_length(reason) <= 200),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS recovery_cases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  member_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  round_no integer NOT NULL,
+  amount_owed bigint NOT NULL CHECK (amount_owed >= 0),
+  covered_by_deposit bigint NOT NULL CHECK (covered_by_deposit >= 0),
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved', 'written_off')),
+  notes text CHECK (notes IS NULL OR char_length(notes) <= 1000),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  resolved_at timestamptz,
+  UNIQUE (group_id, round_no, member_id)
+);
+CREATE INDEX IF NOT EXISTS recovery_cases_open_idx ON recovery_cases (created_at) WHERE status = 'open';
+CREATE TABLE IF NOT EXISTS group_swaps (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL REFERENCES groups (id) ON DELETE RESTRICT,
+  from_user uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  to_user uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  responded_at timestamptz,
+  CHECK (from_user <> to_user)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS group_swaps_one_pending_idx ON group_swaps (group_id, from_user, to_user) WHERE status = 'pending';
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -546,14 +734,16 @@ SELECT v.ts, v.name
     (1790900080000::bigint, 'CreateKycSteps1790900080000'),
     (1790900090000::bigint, 'CreatePayments1790900090000'),
     (1790900100000::bigint, 'CreateNotifications1790900100000'),
-    (1790900110000::bigint, 'CreateSavings1790900110000')
+    (1790900110000::bigint, 'CreateSavings1790900110000'),
+    (1790900120000::bigint, 'CreateFriends1790900120000'),
+    (1790900130000::bigint, 'CreateGroups1790900130000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all sixteen migrations must be listed.
+-- `username` must be there (citext, nullable); and all eighteen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')

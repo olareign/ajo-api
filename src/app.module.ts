@@ -10,6 +10,9 @@ import { ENV, EnvModule } from "./config/env.module.js";
 import { buildDataSourceOptions } from "./database/database-options.js";
 import { AdaptersModule } from "./adapters/adapters.module.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { FriendsModule } from "./friends/friends.module.js";
+import { GroupsModule } from "./groups/groups.module.js";
+import { TrustModule } from "./groups/trust.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { IdentityModule } from "./identity/identity.module.js";
 import { KycModule } from "./kyc/kyc.module.js";
@@ -55,6 +58,9 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     IdentityModule,
     AuthModule,
     KycModule,
+    TrustModule,
+    FriendsModule,
+    GroupsModule,
     LedgerModule,
     NotificationsModule,
     PaymentsModule,
