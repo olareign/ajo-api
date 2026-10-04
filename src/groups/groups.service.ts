@@ -61,6 +61,7 @@ export type Summary = {
   mySpot: number | null;
   friendsIn: number;
   inviteCode: string | null;
+  rules: ReturnType<Groups["rules"]>;
 };
 
 type SummaryRow = GroupRow & {
@@ -683,7 +684,7 @@ export class Groups {
     if (problem) throw new BadRequestException({ message: problem, code: "group_invalid" });
   }
 
-  private rules(row: GroupRow) {
+  rules(row: GroupRow) {
     return {
       deposit: money(row.deposit_base, row.currency),
       earlyDeposit: money(row.deposit_early, row.currency),
@@ -715,6 +716,7 @@ export class Groups {
       mySpot: row.my_spot,
       friendsIn: row.friends_in,
       inviteCode: row.is_member ? row.invite_code : null,
+      rules: this.rules(row),
     };
   }
 

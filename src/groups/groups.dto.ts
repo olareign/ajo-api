@@ -102,6 +102,11 @@ export class GroupSummaryResponse {
   @ApiProperty({ nullable: true }) mySpot!: number | null;
   @ApiProperty({ description: "Friends of yours who are in it" }) friendsIn!: number;
   @ApiProperty({ nullable: true, description: "Only shown to members" }) inviteCode!: string | null;
+  @ApiProperty({
+    type: Object,
+    description: "The deposits, fee and grace period this circle was made with",
+  })
+  rules!: unknown;
 }
 
 export class DiscoverResponse extends GroupSummaryResponse {
@@ -156,7 +161,6 @@ export class GroupDetailResponse extends GroupSummaryResponse {
   @ApiProperty({ nullable: true }) pickDeadline!: string | null;
   @ApiProperty({ type: Object, nullable: true }) nextDue!: unknown;
   @ApiProperty() graceDays!: number;
-  @ApiProperty({ type: Object }) rules!: unknown;
 }
 
 export class SwapResponse {

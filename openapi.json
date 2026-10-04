@@ -3892,6 +3892,10 @@
             "nullable": true,
             "description": "Only shown to members"
           },
+          "rules": {
+            "type": "object",
+            "description": "The deposits, fee and grace period this circle was made with"
+          },
           "members": {
             "description": "Members, with their turn, trust level and this round's payment (members only)",
             "type": "array",
@@ -3933,9 +3937,6 @@
           },
           "graceDays": {
             "type": "number"
-          },
-          "rules": {
-            "type": "object"
           }
         },
         "required": [
@@ -3958,14 +3959,14 @@
           "mySpot",
           "friendsIn",
           "inviteCode",
+          "rules",
           "members",
           "rounds",
           "draws",
           "myDeposit",
           "pickDeadline",
           "nextDue",
-          "graceDays",
-          "rules"
+          "graceDays"
         ]
       },
       "GroupSummaryResponse": {
@@ -4056,6 +4057,10 @@
             "type": "object",
             "nullable": true,
             "description": "Only shown to members"
+          },
+          "rules": {
+            "type": "object",
+            "description": "The deposits, fee and grace period this circle was made with"
           }
         },
         "required": [
@@ -4077,7 +4082,8 @@
           "isCreator",
           "mySpot",
           "friendsIn",
-          "inviteCode"
+          "inviteCode",
+          "rules"
         ]
       },
       "GroupsResponse": {
@@ -4183,6 +4189,10 @@
             "nullable": true,
             "description": "Only shown to members"
           },
+          "rules": {
+            "type": "object",
+            "description": "The deposits, fee and grace period this circle was made with"
+          },
           "score": {
             "type": "number",
             "description": "How well it fits you: friends in it count most"
@@ -4208,6 +4218,7 @@
           "mySpot",
           "friendsIn",
           "inviteCode",
+          "rules",
           "score"
         ]
       },
