@@ -1,6 +1,6 @@
 import { ValidationPipe } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import type { NextFunction, Request, Response } from "express";
+import { json, type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import type { Env } from "../config/env.js";
 import { AllExceptionsFilter } from "./all-exceptions.filter.js";
@@ -8,6 +8,9 @@ import { clientContextMiddleware } from "./client-context.js";
 import { requestIdMiddleware } from "./request-id.js";
 
 export const API_PREFIX = "api/v1";
+
+/** A request whose exact body bytes were kept, for checking a partner's signature. */
+export type RequestWithRawBody = Request & { rawBody?: Buffer };
 export const MAX_BODY_SIZE = "100kb";
 
 /**
@@ -38,7 +41,17 @@ export function configureApp(app: NestExpressApplication, env: Env): void {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
-  app.useBodyParser("json", { limit: MAX_BODY_SIZE });
+  app.use(
+    json({
+      limit: MAX_BODY_SIZE,
+      // A webhook's signature is over the exact bytes sent, so keep them (for webhook paths only).
+      verify: (req: Request, _res, buf: Buffer) => {
+        if (req.originalUrl?.startsWith(`/${API_PREFIX}/webhooks/`)) {
+          (req as RequestWithRawBody).rawBody = buf;
+        }
+      },
+    }),
+  );
 
   app.setGlobalPrefix(API_PREFIX);
   app.useGlobalPipes(

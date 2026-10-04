@@ -852,6 +852,29 @@
         ]
       }
     },
+    "/api/v1/webhooks/{provider}": {
+      "post": {
+        "operationId": "WebhooksController_receive",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stored. The body says how many events it held."
+          }
+        },
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
     "/api/v1/wallet/rails": {
       "get": {
         "operationId": "WalletController_rails",

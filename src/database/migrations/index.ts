@@ -10,6 +10,7 @@ import { AddUsername1790900050000 } from "./1790900050000-add-username.js";
 import { AddLoginDevices1790900060000 } from "./1790900060000-add-login-devices.js";
 import { AddTrustedDevices1790900070000 } from "./1790900070000-add-trusted-devices.js";
 import { CreateKycSteps1790900080000 } from "./1790900080000-create-kyc-steps.js";
+import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js";
 import { CreatePasswordResetTokens1790900010000 } from "./1790900010000-create-password-reset-tokens.js";
 
 /** Every migration, in order. Listed explicitly so builds and ESM loading never miss one. */
@@ -27,4 +28,5 @@ export const migrations = [
   AddLoginDevices1790900060000,
   AddTrustedDevices1790900070000,
   CreateKycSteps1790900080000,
+  CreatePayments1790900090000,
 ];

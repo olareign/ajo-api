@@ -308,3 +308,86 @@ describe("reversals", () => {
     ).rejects.toThrow(/already reversed/i);
   });
 });
+
+describe("joining the caller's own database transaction", () => {
+  const funding = async (user: string, key: string, amount = "1000") => {
+    const settlement = await ledger.systemAccount("settlement", "NGN");
+    const wallet = await ledger.userAccount(user, "available", "NGN");
+    return {
+      type: "funding",
+      idempotencyKey: key,
+      entries: [
+        { accountId: settlement, direction: "debit" as const, amount },
+        { accountId: wallet, direction: "credit" as const, amount },
+      ],
+    };
+  };
+
+  it("leaves no trace when the caller's transaction is rolled back", async () => {
+    const user = await newUser();
+    const key = `join-${randomUUID()}`;
+    const posting = await funding(user, key);
+    await expect(
+      db.transaction(async (tx) => {
+        await ledger.post(posting, {}, tx);
+        throw new Error("the caller changed its mind");
+      }),
+    ).rejects.toThrow("changed its mind");
+    const rows = await db.query("SELECT 1 FROM ledger_transactions WHERE idempotency_key = $1", [
+      key,
+    ]);
+    expect(rows).toHaveLength(0);
+    expect(await ledger.balance(await ledger.userAccount(user, "available", "NGN"))).toBe("0");
+  });
+
+  it("commits together with the caller's own writes, and the posting counts only then", async () => {
+    const user = await newUser();
+    const key = `join-${randomUUID()}`;
+    const posting = await funding(user, key, "2500");
+    const result = await db.transaction(async (tx) => {
+      const posted = await ledger.post(posting, {}, tx);
+      await tx.query("SELECT 1");
+      return posted;
+    });
+    expect(result.replayed).toBe(false);
+    expect(await ledger.balance(await ledger.userAccount(user, "available", "NGN"))).toBe("2500");
+    expect((await ledger.post(posting)).replayed).toBe(true);
+  });
+
+  it("still refuses an overdraft, and takes the caller's earlier writes down with it", async () => {
+    const user = await newUser();
+    const wallet = await ledger.userAccount(user, "available", "NGN");
+    const settlement = await ledger.systemAccount("settlement", "NGN");
+    const earlier = `join-${randomUUID()}`;
+    await expect(
+      db.transaction(async (tx) => {
+        await ledger.post(await funding(user, earlier, "100"), {}, tx);
+        await ledger.post(
+          {
+            type: "withdrawal",
+            idempotencyKey: `join-${randomUUID()}`,
+            entries: [
+              { accountId: wallet, direction: "debit", amount: "999" },
+              { accountId: settlement, direction: "credit", amount: "999" },
+            ],
+          },
+          {},
+          tx,
+        );
+      }),
+    ).rejects.toThrow(/Insufficient funds/);
+    const rows = await db.query("SELECT 1 FROM ledger_transactions WHERE idempotency_key = $1", [
+      earlier,
+    ]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("reverses a posting inside the caller's transaction too", async () => {
+    const user = await newUser();
+    const original = await ledger.post(await funding(user, `join-${randomUUID()}`, "700"));
+    await db.transaction((tx) =>
+      ledger.reverse(original.id, { idempotencyKey: `join-${randomUUID()}`, reason: "test" }, tx),
+    );
+    expect(await ledger.balance(await ledger.userAccount(user, "available", "NGN"))).toBe("0");
+  });
+});

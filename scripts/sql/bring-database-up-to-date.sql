@@ -374,6 +374,85 @@ CREATE TABLE IF NOT EXISTS kyc_steps (
   PRIMARY KEY (user_id, step)
 );
 
+-- 1790900090000 CreatePayments --------------------------------------------------------------
+-- Money moving through payment partners: payment attempts, the webhook inbox, where withdrawals go,
+-- and standing collection permissions (mandates). The rules that protect money live here too: one
+-- open mandate per person, one attempt per idempotency key, one stored copy of each partner event.
+CREATE TABLE IF NOT EXISTS payment_intents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  kind text NOT NULL CHECK (kind IN ('funding', 'withdrawal')),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  method text NOT NULL CHECK (method IN ('card', 'transfer', 'ussd', 'direct_debit', 'bank_account')),
+  currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+  amount bigint NOT NULL CHECK (amount > 0),
+  status text NOT NULL CHECK (status IN ('created', 'pending', 'succeeded', 'failed', 'reversed')),
+  reference text NOT NULL UNIQUE CHECK (char_length(reference) BETWEEN 16 AND 50),
+  provider_id text CHECK (char_length(provider_id) <= 200),
+  idempotency_key text NOT NULL CHECK (char_length(idempotency_key) BETWEEN 8 AND 100),
+  request_hash char(64) NOT NULL,
+  action jsonb,
+  failure_reason text CHECK (char_length(failure_reason) <= 300),
+  ledger_transaction_id uuid REFERENCES ledger_transactions (id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, kind, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS payment_intents_user_idx ON payment_intents (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS payment_intents_provider_id_idx ON payment_intents (provider, provider_id)
+  WHERE provider_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS payment_intents_pending_idx ON payment_intents (updated_at)
+  WHERE status IN ('created', 'pending');
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  event_id text NOT NULL CHECK (char_length(event_id) BETWEEN 1 AND 200),
+  kind text NOT NULL,
+  type text NOT NULL,
+  payload jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'received'
+    CHECK (status IN ('received', 'processed', 'ignored', 'failed')),
+  attempts integer NOT NULL DEFAULT 0,
+  last_error text CHECK (char_length(last_error) <= 500),
+  received_at timestamptz NOT NULL DEFAULT now(),
+  processed_at timestamptz,
+  UNIQUE (provider, event_id)
+);
+CREATE INDEX IF NOT EXISTS webhook_events_open_idx ON webhook_events (received_at)
+  WHERE status IN ('received', 'failed');
+
+CREATE TABLE IF NOT EXISTS payout_accounts (
+  user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  bank_code text NOT NULL CHECK (char_length(bank_code) BETWEEN 2 AND 20),
+  bank_name text NOT NULL CHECK (char_length(bank_name) <= 100),
+  last4 char(4) NOT NULL CHECK (last4 ~ '^[0-9]{4}$'),
+  account_name text NOT NULL CHECK (char_length(account_name) <= 200),
+  recipient_code text NOT NULL CHECK (char_length(recipient_code) <= 100),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS mandates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  status text NOT NULL CHECK (status IN ('pending', 'active', 'cancelled', 'failed')),
+  reference text NOT NULL UNIQUE CHECK (char_length(reference) BETWEEN 16 AND 50),
+  provider_id text CHECK (char_length(provider_id) <= 200),
+  provider_mandate_id text CHECK (char_length(provider_mandate_id) <= 200),
+  authorization_code text CHECK (char_length(authorization_code) <= 200),
+  action jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  cancelled_at timestamptz
+);
+CREATE UNIQUE INDEX IF NOT EXISTS mandates_one_open_per_user ON mandates (user_id)
+  WHERE status IN ('pending', 'active');
+CREATE INDEX IF NOT EXISTS mandates_provider_idx ON mandates (provider, provider_id)
+  WHERE provider_id IS NOT NULL;
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -397,14 +476,15 @@ SELECT v.ts, v.name
     (1790900050000::bigint, 'AddUsername1790900050000'),
     (1790900060000::bigint, 'AddLoginDevices1790900060000'),
     (1790900070000::bigint, 'AddTrustedDevices1790900070000'),
-    (1790900080000::bigint, 'CreateKycSteps1790900080000')
+    (1790900080000::bigint, 'CreateKycSteps1790900080000'),
+    (1790900090000::bigint, 'CreatePayments1790900090000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all thirteen migrations must be listed.
+-- `username` must be there (citext, nullable); and all fourteen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')
