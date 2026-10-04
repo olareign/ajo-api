@@ -4,7 +4,11 @@ import * as OTPAuth from "otpauth";
 import request from "supertest";
 import { DataSource } from "typeorm";
 import { LedgerService } from "../../src/ledger/ledger.service.js";
-import { signFakeWebhook, type FakeProvider } from "../../src/payments/providers/fake.provider.js";
+import {
+  recipientFor,
+  signFakeWebhook,
+  type FakeProvider,
+} from "../../src/payments/providers/fake.provider.js";
 import type { ProviderEvent } from "../../src/payments/providers/provider.port.js";
 import { PaymentProviders } from "../../src/payments/providers/providers.service.js";
 import { createVerifiedUser, newIp } from "../support/users.js";
@@ -80,6 +84,33 @@ export function paymentsHarness(app: NestExpressApplication) {
       currency: country === "NG" ? "NGN" : "GBP",
       call,
     };
+  }
+
+  /** Gives the person a payout account the bank will vouch for as their own. */
+  async function payoutAccount(
+    who: { call: (m: "put", p: string) => request.Test },
+    number?: string,
+    name = "TEST USER",
+  ) {
+    const accountNumber =
+      number ?? `0${randomBytes(5).toString("hex").replace(/\D/g, "").padEnd(9, "7").slice(0, 9)}`;
+    fake("NG").behaviour.accountNames.set(accountNumber, name);
+    await who
+      .call("put", "/payments/payout-account")
+      .send({ bankCode: "058", accountNumber })
+      .expect(200);
+    return accountNumber;
+  }
+
+  /** A payout account written directly, for tests whose app does not let the account be set through the API. */
+  async function seedPayoutAccount(userId: string) {
+    const number = `1${randomBytes(4).toString("hex").replace(/\D/g, "").padEnd(9, "3").slice(0, 9)}`;
+    await db.query(
+      `INSERT INTO payout_accounts (user_id, provider, bank_code, bank_name, last4, account_name, recipient_code)
+       VALUES ($1, 'fake', '058', 'GTBank', $2, 'TEST USER', $3)`,
+      [userId, number.slice(-4), recipientFor(number)],
+    );
+    return number;
   }
 
   const reference = (prefix: string) => `${prefix}_${randomBytes(12).toString("hex")}`;
@@ -187,6 +218,8 @@ export function paymentsHarness(app: NestExpressApplication) {
     http,
     person,
     ready,
+    payoutAccount,
+    seedPayoutAccount,
     reference,
     giveMoney,
     balance,

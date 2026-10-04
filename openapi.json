@@ -894,6 +894,134 @@
         ]
       }
     },
+    "/api/v1/payments/withdraw": {
+      "post": {
+        "operationId": "PaymentsController_withdraw",
+        "parameters": [
+          {
+            "name": "x-ajo-mfa-code",
+            "in": "header",
+            "description": "The current 6-digit code from the authenticator app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/api/v1/payments/payout-account": {
+      "get": {
+        "operationId": "PaymentsController_payoutAccount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Null when none is set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutAccountResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      },
+      "put": {
+        "operationId": "PaymentsController_setPayoutAccount",
+        "parameters": [
+          {
+            "name": "x-ajo-mfa-code",
+            "in": "header",
+            "description": "The current 6-digit code from the authenticator app",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutAccountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`mfa_code_required`, `mfa_code_wrong`, `mfa_locked`"
+          },
+          "403": {
+            "description": "`kyc_required` or `mfa_enrolment_required`"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/payments/{id}": {
       "get": {
         "operationId": "PaymentsController_get",
@@ -1693,6 +1821,66 @@
           "action",
           "failureReason",
           "createdAt"
+        ]
+      },
+      "WithdrawDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Whole minor units as a string, e.g. 500000 for ₦5,000"
+          },
+          "pin": {
+            "type": "string",
+            "description": "The 6-digit transaction PIN"
+          }
+        },
+        "required": [
+          "amount",
+          "pin"
+        ]
+      },
+      "PayoutAccountResponse": {
+        "type": "object",
+        "properties": {
+          "bankCode": {
+            "type": "string"
+          },
+          "bankName": {
+            "type": "string"
+          },
+          "last4": {
+            "type": "string",
+            "description": "The last four digits, for recognising it"
+          },
+          "accountName": {
+            "type": "string",
+            "description": "The name the bank holds the account under"
+          }
+        },
+        "required": [
+          "bankCode",
+          "bankName",
+          "last4",
+          "accountName"
+        ]
+      },
+      "PayoutAccountDto": {
+        "type": "object",
+        "properties": {
+          "bankCode": {
+            "type": "string",
+            "example": "058",
+            "description": "The bank's code"
+          },
+          "accountNumber": {
+            "type": "string",
+            "example": "0123456789"
+          }
+        },
+        "required": [
+          "bankCode",
+          "accountNumber"
         ]
       },
       "RailsConnected": {

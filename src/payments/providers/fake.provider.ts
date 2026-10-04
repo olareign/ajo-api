@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   InvalidWebhookSignature,
   ProviderRejected,
@@ -12,6 +12,10 @@ import {
   type TransferState,
   type VerifiedPayment,
 } from "./provider.port.js";
+
+/** A real partner's recipient code is opaque; so is this, and it says nothing about the account number. */
+export const recipientFor = (accountNumber: string): string =>
+  `RCP_${createHash("sha256").update(accountNumber).digest("hex").slice(0, 16)}`;
 
 export const FAKE_WEBHOOK_SECRET = "fake-webhook-secret-for-development-and-tests";
 
@@ -135,7 +139,7 @@ export class FakeProvider implements PaymentProvider {
 
   async createRecipient(input: { name: string; bankCode: string; accountNumber: string }) {
     await this.record("createRecipient", input);
-    return { recipientCode: `RCP_${input.accountNumber}` };
+    return { recipientCode: recipientFor(input.accountNumber) };
   }
 
   async transfer(input: {

@@ -30,6 +30,7 @@ export class CreatePayments1790900090000 implements MigrationInterface {
         idempotency_key text NOT NULL CHECK (char_length(idempotency_key) BETWEEN 8 AND 100),
         request_hash char(64) NOT NULL,
         action jsonb,
+        recipient_code text CHECK (char_length(recipient_code) <= 100),
         failure_reason text CHECK (char_length(failure_reason) <= 300),
         ledger_transaction_id uuid REFERENCES ledger_transactions (id),
         created_at timestamptz NOT NULL DEFAULT now(),

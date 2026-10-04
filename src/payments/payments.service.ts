@@ -1,6 +1,4 @@
 import {
-  BadRequestException,
-  ConflictException,
   HttpException,
   HttpStatus,
   Inject,
@@ -9,18 +7,27 @@ import {
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { DataSource } from "typeorm";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import type { PaymentResponse } from "./payments.dto.js";
+import {
+  coded,
+  COLUMNS,
+  newReference,
+  requestHash,
+  view,
+  type IntentRow,
+} from "./payment-intents.js";
+import { PaymentContext } from "./payment-context.js";
 import { PaymentEvents } from "./payment-events.service.js";
+import { Withdrawals } from "./withdrawals.service.js";
 import {
   ProviderRejected,
   ProviderUnavailable,
   type FundingMethod,
-  type PaymentProvider,
 } from "./providers/provider.port.js";
 import { PaymentProviders } from "./providers/providers.service.js";
 
@@ -29,48 +36,6 @@ const RECONCILE_AFTER_SECONDS = 30;
 const UNAVAILABLE = "The payment partner could not be reached.";
 
 type Tx = Parameters<typeof sql>[0];
-
-export type IntentRow = {
-  id: string;
-  user_id: string;
-  kind: "funding" | "withdrawal";
-  provider: PaymentProvider["name"];
-  method: PaymentResponse["method"];
-  currency: string;
-  amount: string;
-  status: PaymentResponse["status"];
-  reference: string;
-  provider_id: string | null;
-  request_hash: string;
-  action: PaymentResponse["action"];
-  failure_reason: string | null;
-  created_at: Date;
-};
-
-const COLUMNS = `id, user_id, kind, provider, method, currency, amount::text, status, reference,
-  provider_id, request_hash, action, failure_reason, created_at`;
-
-export const requestHash = (...parts: unknown[]): string =>
-  createHash("sha256").update(JSON.stringify(parts)).digest("hex");
-
-export const newReference = (prefix: "ajf" | "ajw" | "ajm"): string =>
-  `${prefix}_${randomBytes(12).toString("hex")}`;
-
-export const coded = (status: HttpStatus, message: string, code: string) =>
-  new HttpException({ message, code }, status);
-
-export function view(row: IntentRow): PaymentResponse {
-  return {
-    id: row.id,
-    kind: row.kind,
-    status: row.status,
-    method: row.method,
-    amount: { amount: row.amount, currency: row.currency },
-    action: row.action,
-    failureReason: row.failure_reason,
-    createdAt: row.created_at.toISOString(),
-  };
-}
 
 /** Why an attempt that did not start is answered as it is, for the first request and for every replay. */
 function failure(row: IntentRow): HttpException {
@@ -86,31 +51,12 @@ function failure(row: IntentRow): HttpException {
 export class PaymentsService {
   constructor(
     private readonly db: DataSource,
+    private readonly context: PaymentContext,
     private readonly providers: PaymentProviders,
     private readonly events: PaymentEvents,
+    private readonly withdrawals: Withdrawals,
     @Inject(ENV) private readonly env: Env,
   ) {}
-
-  async person(userId: string): Promise<{ email: string; country: string | null; name: string }> {
-    const [user] = await this.db.query<{ email: string; country: string | null; name: string }[]>(
-      `SELECT email, country, display_name AS name FROM users WHERE id = $1`,
-      [userId],
-    );
-    if (!user) throw new NotFoundException();
-    return user;
-  }
-
-  /** The partner that serves this country, or a clear 503: nothing is started without one. */
-  providerFor(country: string | null): PaymentProvider {
-    const provider = this.providers.forCountry(country);
-    if (!provider) {
-      throw new ServiceUnavailableException({
-        message: "Payments aren't switched on yet.",
-        code: "payments_not_connected",
-      });
-    }
-    return provider;
-  }
 
   // ---- adding money ------------------------------------------------------------------------------
 
@@ -125,8 +71,8 @@ export class PaymentsService {
     input: { amount: string; method: FundingMethod },
     idempotencyKey: string,
   ): Promise<PaymentResponse> {
-    const person = await this.person(userId);
-    const provider = this.providerFor(person.country);
+    const person = await this.context.person(userId);
+    const provider = this.context.providerFor(person.country);
     if (!provider.supports.fund.includes(input.method)) {
       throw coded(
         HttpStatus.BAD_REQUEST,
@@ -228,13 +174,36 @@ export class PaymentsService {
    */
   async get(userId: string, id: string): Promise<PaymentResponse> {
     let row = await this.find(userId, id);
-    if (row.status === "pending" && row.kind === "funding") {
-      if (await this.claimReconcile(row.id)) {
+    if (row.status === "pending") {
+      if (row.kind === "funding" && (await this.claimReconcile(row.id))) {
         await this.reconcileFunding(row);
+        row = await this.find(userId, id);
+      } else if (row.kind === "withdrawal" && (await this.withdrawals.reconcileIfDue(row.id))) {
         row = await this.find(userId, id);
       }
     }
     return view(row);
+  }
+
+  /**
+   * For a background job: settle payments that have sat pending for a few minutes, whether or not
+   * anyone is looking at them. Returns how many it checked.
+   */
+  async reconcileStale(limit = 25): Promise<number> {
+    const stale = await this.db.query<IntentRow[]>(
+      `SELECT ${COLUMNS} FROM payment_intents
+        WHERE status = 'pending' AND updated_at < now() - interval '5 minutes'
+        ORDER BY updated_at LIMIT $1`,
+      [limit],
+    );
+    for (const row of stale) {
+      if (row.kind === "funding") {
+        if (await this.claimReconcile(row.id)) await this.reconcileFunding(row);
+      } else {
+        await this.withdrawals.reconcileIfDue(row.id);
+      }
+    }
+    return stale.length;
   }
 
   private async find(userId: string, id: string): Promise<IntentRow> {
@@ -284,5 +253,3 @@ export class PaymentsService {
     }
   }
 }
-
-export { BadRequestException, ConflictException };

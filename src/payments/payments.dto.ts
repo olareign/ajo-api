@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsIn, Matches } from "class-validator";
+import { IsIn, IsString, Matches } from "class-validator";
 
 /** Whole minor units (kobo, pence), no sign, no decimals, no leading zero, at most 15 digits. */
 export const AMOUNT = /^[1-9]\d{0,14}$/;
@@ -39,4 +39,32 @@ export class FundDto {
   @ApiProperty({ enum: ["card", "transfer", "ussd", "direct_debit"] })
   @IsIn(["card", "transfer", "ussd", "direct_debit"])
   method!: "card" | "transfer" | "ussd" | "direct_debit";
+}
+
+export class WithdrawDto {
+  @ApiProperty({ description: "Whole minor units as a string, e.g. 500000 for ₦5,000" })
+  @Matches(AMOUNT)
+  amount!: string;
+
+  @ApiProperty({ description: "The 6-digit transaction PIN" })
+  @IsString()
+  @Matches(/^\d{6}$/)
+  pin!: string;
+}
+
+export class PayoutAccountDto {
+  @ApiProperty({ example: "058", description: "The bank's code" })
+  @Matches(/^[0-9]{3,6}$/)
+  bankCode!: string;
+
+  @ApiProperty({ example: "0123456789" })
+  @Matches(/^[0-9]{10}$/)
+  accountNumber!: string;
+}
+
+export class PayoutAccountResponse {
+  @ApiProperty() bankCode!: string;
+  @ApiProperty() bankName!: string;
+  @ApiProperty({ description: "The last four digits, for recognising it" }) last4!: string;
+  @ApiProperty({ description: "The name the bank holds the account under" }) accountName!: string;
 }
