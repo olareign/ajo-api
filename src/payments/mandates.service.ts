@@ -13,7 +13,7 @@ import { PaymentProviders } from "./providers/providers.service.js";
 type Row = {
   id: string;
   user_id: string;
-  provider: "paystack" | "gocardless" | "fake";
+  provider: "paystack" | "fake";
   status: "pending" | "active" | "cancelled" | "failed";
   reference: string;
   provider_id: string | null;

@@ -57,7 +57,7 @@ describe("who may talk to the webhook endpoint", () => {
     const post = (name: string) =>
       request(t.http()).post(`/api/v1/webhooks/${name}`).set("X-Forwarded-For", newIp()).send({});
     await post("paystack").expect(404);
-    await post("gocardless").expect(404);
+    await post("somebody-else").expect(404);
     await post("nobody").expect(404);
   });
 });

@@ -382,7 +382,7 @@ CREATE TABLE IF NOT EXISTS payment_intents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
   kind text NOT NULL CHECK (kind IN ('funding', 'withdrawal')),
-  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'fake')),
   method text NOT NULL CHECK (method IN ('card', 'transfer', 'ussd', 'direct_debit', 'bank_account')),
   currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
   amount bigint NOT NULL CHECK (amount > 0),
@@ -407,7 +407,7 @@ CREATE INDEX IF NOT EXISTS payment_intents_pending_idx ON payment_intents (updat
 
 CREATE TABLE IF NOT EXISTS webhook_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'fake')),
   event_id text NOT NULL CHECK (char_length(event_id) BETWEEN 1 AND 200),
   kind text NOT NULL,
   type text NOT NULL,
@@ -425,7 +425,7 @@ CREATE INDEX IF NOT EXISTS webhook_events_open_idx ON webhook_events (received_a
 
 CREATE TABLE IF NOT EXISTS payout_accounts (
   user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
-  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'fake')),
   bank_code text NOT NULL CHECK (char_length(bank_code) BETWEEN 2 AND 20),
   bank_name text NOT NULL CHECK (char_length(bank_name) <= 100),
   last4 char(4) NOT NULL CHECK (last4 ~ '^[0-9]{4}$'),
@@ -438,7 +438,7 @@ CREATE TABLE IF NOT EXISTS payout_accounts (
 CREATE TABLE IF NOT EXISTS mandates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
-  provider text NOT NULL CHECK (provider IN ('paystack', 'gocardless', 'fake')),
+  provider text NOT NULL CHECK (provider IN ('paystack', 'fake')),
   status text NOT NULL CHECK (status IN ('pending', 'active', 'cancelled', 'failed')),
   reference text NOT NULL UNIQUE CHECK (char_length(reference) BETWEEN 16 AND 50),
   provider_id text CHECK (char_length(provider_id) <= 200),

@@ -1,7 +1,7 @@
 export type Country = "NG" | "GB";
 export type Currency = "NGN" | "GBP";
 export type FundingMethod = "card" | "transfer" | "ussd" | "direct_debit";
-export type ProviderName = "paystack" | "gocardless" | "fake";
+export type ProviderName = "paystack" | "fake";
 
 /** The partner said no, clearly: nothing happened on their side, so it is safe to treat as failed. */
 export class ProviderRejected extends Error {
@@ -60,7 +60,7 @@ export type ProviderEvent = Readonly<{
   providerId?: string;
   amount?: string;
   currency?: string;
-  /** GoCardless: how far a payment has got. Bank-to-bank payments count at "confirmed"; direct debits only at "paid_out". */
+  /** A partner that reports stages: how far a payment has got. Bank-to-bank payments count at "confirmed"; direct debits only at "paid_out". */
   stage?: "confirmed" | "paid_out";
   customerEmail?: string;
   authorizationCode?: string;
@@ -104,7 +104,7 @@ export interface PaymentProvider {
   parseWebhook(rawBody: Buffer, signature: string | undefined): ProviderEvent[];
   /**
    * For partners whose events do not say which of our payments or mandates they are about, or how
-   * much (GoCardless): ask the partner, and fill in what it says. Null when it cannot tell.
+   * much: ask the partner, and fill in what it says. Null when it cannot tell.
    */
   lookupEvent?(
     event: ProviderEvent,

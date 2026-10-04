@@ -63,8 +63,8 @@ const schema = z
     BFF_SHARED_SECRET: z.string().min(32).optional(),
     /**
      * Payment partners. With none set, money screens show "not switched on" and nothing can move.
-     * Paystack serves Nigeria (card, transfer, USSD, direct debit, payouts); GoCardless serves the UK
-     * (bank payments and Bacs direct debit). Use test keys until the business is verified.
+     * Paystack serves Nigeria (card, transfer, USSD, direct debit, payouts). The UK has no partner
+     * yet. Use test keys until the business is verified.
      */
     PAYSTACK_SECRET_KEY: z
       .string()
@@ -74,10 +74,6 @@ const schema = z
       )
       .optional(),
     PAYSTACK_BASE_URL: urlWithScheme(["https", "http"]).default("https://api.paystack.co"),
-    GOCARDLESS_ACCESS_TOKEN: z.string().min(1).optional(),
-    /** The signing secret of the webhook endpoint set up in the GoCardless dashboard. */
-    GOCARDLESS_WEBHOOK_SECRET: z.string().min(1).optional(),
-    GOCARDLESS_ENVIRONMENT: z.enum(["sandbox", "live"]).default("sandbox"),
     /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
     PAYMENTS_FAKE: flag.default(false),
     /**
@@ -130,9 +126,6 @@ const schema = z
     }
     if (env.NODE_ENV === "production" && env.PAYMENTS_FAKE) {
       require("PAYMENTS_FAKE", "stand-in not allowed in production");
-    }
-    if (env.GOCARDLESS_ACCESS_TOKEN && !env.GOCARDLESS_WEBHOOK_SECRET) {
-      require("GOCARDLESS_WEBHOOK_SECRET", "required when GOCARDLESS_ACCESS_TOKEN is set");
     }
     if (env.BOT_CHECK === "turnstile" && !env.TURNSTILE_SECRET_KEY) {
       require("TURNSTILE_SECRET_KEY", "required when BOT_CHECK=turnstile");

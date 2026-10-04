@@ -21,7 +21,6 @@ import { WebhookInbox } from "./webhook-inbox.service.js";
 /** Where each partner puts its signature. */
 const SIGNATURE_HEADER: Readonly<Record<ProviderName, string>> = {
   paystack: "x-paystack-signature",
-  gocardless: "webhook-signature",
   fake: "x-fake-signature",
 };
 

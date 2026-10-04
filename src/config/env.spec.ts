@@ -128,9 +128,8 @@ describe("adapter configuration", () => {
 
   it("starts with no payment partner connected, and never asks for one", () => {
     const env = loadEnv({ ...prod });
-    expect(env).toMatchObject({ PAYMENTS_FAKE: false, GOCARDLESS_ENVIRONMENT: "sandbox" });
+    expect(env.PAYMENTS_FAKE).toBe(false);
     expect(env.PAYSTACK_SECRET_KEY).toBeUndefined();
-    expect(env.GOCARDLESS_ACCESS_TOKEN).toBeUndefined();
   });
 
   it("sweeps payments every minute by default, can be turned off, and stays quiet in tests", () => {
@@ -142,23 +141,13 @@ describe("adapter configuration", () => {
     );
   });
 
-  it("only accepts a Paystack secret key that looks like one, and a GoCardless token with its webhook secret", () => {
+  it("only accepts a Paystack secret key that looks like one", () => {
     expect(() => loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "pk_test_publickey" })).toThrow(
       /PAYSTACK_SECRET_KEY/,
     );
     expect(loadEnv({ ...prod, PAYSTACK_SECRET_KEY: "sk_test_abc123" }).PAYSTACK_SECRET_KEY).toBe(
       "sk_test_abc123",
     );
-    expect(() => loadEnv({ ...prod, GOCARDLESS_ACCESS_TOKEN: "sandbox_token" })).toThrow(
-      /GOCARDLESS_WEBHOOK_SECRET/,
-    );
-    expect(
-      loadEnv({
-        ...prod,
-        GOCARDLESS_ACCESS_TOKEN: "sandbox_token",
-        GOCARDLESS_WEBHOOK_SECRET: "endpoint-secret",
-      }).GOCARDLESS_ACCESS_TOKEN,
-    ).toBe("sandbox_token");
   });
 
   it("does not echo a payment secret in an error", () => {
