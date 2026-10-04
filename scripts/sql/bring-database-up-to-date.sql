@@ -520,6 +520,60 @@ CREATE TABLE IF NOT EXISTS savings_debits (
 CREATE INDEX IF NOT EXISTS savings_debits_due_idx ON savings_debits (next_attempt_at)
   WHERE status = 'scheduled';
 
+-- 1790900120000 CreateFriends ----------------------------------------------------------------
+-- Friendships (one row per pair, lowest id first, so crossing requests can never make two), blocks,
+-- reports for the admin queue, invite links, and who invited whom.
+CREATE TABLE IF NOT EXISTS friendships (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  low_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  high_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  requester_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  responded_at timestamptz,
+  CHECK (low_id < high_id),
+  CHECK (requester_id IN (low_id, high_id)),
+  UNIQUE (low_id, high_id)
+);
+CREATE INDEX IF NOT EXISTS friendships_low_idx ON friendships (low_id, status);
+CREATE INDEX IF NOT EXISTS friendships_high_idx ON friendships (high_id, status);
+
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  blocked_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+CREATE INDEX IF NOT EXISTS blocks_blocked_idx ON blocks (blocked_id);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  reported_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  reason text NOT NULL CHECK (reason IN ('spam', 'harassment', 'fake_account', 'scam', 'other')),
+  details text CHECK (details IS NULL OR char_length(details) <= 500),
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'reviewed', 'dismissed')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (reporter_id <> reported_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS reports_one_open_idx ON reports (reporter_id, reported_id)
+  WHERE status = 'open';
+CREATE INDEX IF NOT EXISTS reports_open_idx ON reports (created_at) WHERE status = 'open';
+
+CREATE TABLE IF NOT EXISTS invite_links (
+  user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  code text NOT NULL UNIQUE CHECK (code ~ '^[A-Z0-9]{8}$'),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS referrals (
+  invitee_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE RESTRICT,
+  inviter_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (invitee_id <> inviter_id)
+);
+CREATE INDEX IF NOT EXISTS referrals_inviter_idx ON referrals (inviter_id);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -546,14 +600,15 @@ SELECT v.ts, v.name
     (1790900080000::bigint, 'CreateKycSteps1790900080000'),
     (1790900090000::bigint, 'CreatePayments1790900090000'),
     (1790900100000::bigint, 'CreateNotifications1790900100000'),
-    (1790900110000::bigint, 'CreateSavings1790900110000')
+    (1790900110000::bigint, 'CreateSavings1790900110000'),
+    (1790900120000::bigint, 'CreateFriends1790900120000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); and all sixteen migrations must be listed.
+-- `username` must be there (citext, nullable); and all seventeen migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name = 'username')
