@@ -2,6 +2,7 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { call, minor, record, text, type HttpFetch } from "./http.js";
 import {
   InvalidWebhookSignature,
+  ProviderRejected,
   ProviderUnavailable,
   type Action,
   type FundingMethod,
@@ -189,6 +190,26 @@ export class PaystackProvider implements PaymentProvider {
       providerId: text(data.reference) ?? null,
       action: { type: "redirect", url } as Action,
     };
+  }
+
+  async chargeMandate(input: {
+    reference: string;
+    amount: string;
+    email: string;
+    authorizationCode: string;
+  }): Promise<{ providerId: string | null }> {
+    const { body } = await this.request("POST", "/transaction/charge_authorization", {
+      email: input.email,
+      amount: input.amount,
+      authorization_code: input.authorizationCode,
+      reference: input.reference,
+      currency: this.currency,
+    });
+    const data = record(record(body).data);
+    if (text(data.status) === "failed") {
+      throw new ProviderRejected(text(data.gateway_response) ?? "The bank refused the collection.");
+    }
+    return { providerId: text(data.reference) ?? null };
   }
 
   async cancelMandate(input: {

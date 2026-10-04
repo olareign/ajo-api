@@ -370,6 +370,53 @@ describe("auto-debit", () => {
     });
   });
 
+  it("collects under a mandate with the authorization code, our reference and the amount in kobo", async () => {
+    const { provider, fetchFn } = setup(
+      json(200, { status: true, data: { status: "pending", reference: "ajf_pull" } }),
+    );
+    const started = await provider.chargeMandate({
+      reference: "ajf_pull",
+      amount: "250000",
+      email: "ada@example.com",
+      authorizationCode: "AUTH_abc",
+    });
+    expect(started).toEqual({ providerId: "ajf_pull" });
+    expect(sent(fetchFn).url).toBe("https://api.paystack.test/transaction/charge_authorization");
+    expect(sent(fetchFn).body).toEqual({
+      email: "ada@example.com",
+      amount: "250000",
+      authorization_code: "AUTH_abc",
+      reference: "ajf_pull",
+      currency: "NGN",
+    });
+  });
+
+  it("says a refused collection was refused, and an unreachable partner was not", async () => {
+    const refused = setup(
+      json(200, {
+        status: true,
+        data: { status: "failed", gateway_response: "Insufficient funds" },
+      }),
+    );
+    await expect(
+      refused.provider.chargeMandate({
+        reference: "r",
+        amount: "1",
+        email: "a@b.co",
+        authorizationCode: "AUTH_x",
+      }),
+    ).rejects.toThrow(ProviderRejected);
+    const down = setup(new TypeError("offline"));
+    await expect(
+      down.provider.chargeMandate({
+        reference: "r",
+        amount: "1",
+        email: "a@b.co",
+        authorizationCode: "AUTH_x",
+      }),
+    ).rejects.toThrow(ProviderUnavailable);
+  });
+
   it("deactivates the authorization when cancelling, and does nothing when it never became one", async () => {
     const { provider, fetchFn } = setup(
       json(200, { status: true, message: "Authorization has been deactivated" }),

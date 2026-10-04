@@ -5,6 +5,7 @@ import { KycModule } from "../kyc/kyc.module.js";
 import { LedgerModule } from "../ledger/ledger.module.js";
 import { PaymentsController } from "./payments.controller.js";
 import { ActiveCommitments } from "./commitments.js";
+import { BankPulls } from "./bank-pulls.service.js";
 import { Mandates } from "./mandates.service.js";
 import { PaymentContext } from "./payment-context.js";
 import { PaymentsService } from "./payments.service.js";
@@ -30,8 +31,16 @@ import { WebhooksController } from "./webhooks.controller.js";
     PayoutAccounts,
     Withdrawals,
     Mandates,
+    BankPulls,
     ActiveCommitments,
   ],
-  exports: [PaymentProviders, PaymentEvents, WebhookInbox, PaymentsService],
+  exports: [
+    PaymentProviders,
+    PaymentEvents,
+    WebhookInbox,
+    PaymentsService,
+    BankPulls,
+    PaymentContext,
+  ],
 })
 export class PaymentsModule {}
