@@ -3,7 +3,10 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { DataSource } from "typeorm";
 import type { AccessClaims } from "../auth/access-tokens.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
+import { KycService } from "../kyc/kyc.service.js";
+import { CONNECTED, currencyFor } from "../kyc/partners.js";
 import {
+  RailsResponse,
   TransactionsQuery,
   TransactionsResponse,
   WalletsResponse,
@@ -14,7 +17,27 @@ import {
 @ApiBearerAuth()
 @Controller("wallet")
 export class WalletController {
-  constructor(private readonly db: DataSource) {}
+  constructor(
+    private readonly db: DataSource,
+    private readonly kyc: KycService,
+  ) {}
+
+  /** What this person can do with money today: their currency, whether they are approved, and which partners are live. */
+  @Get("rails")
+  @ApiOkResponse({ type: RailsResponse })
+  async rails(@CurrentUser() auth: AccessClaims): Promise<RailsResponse> {
+    const [user] = await this.db.query<{ country: string | null }[]>(
+      `SELECT country FROM users WHERE id = $1`,
+      [auth.userId],
+    );
+    const country = user?.country ?? null;
+    return {
+      country,
+      currency: currencyFor(country),
+      kycApproved: await this.kyc.isApproved(auth.userId),
+      connected: { fund: CONNECTED.fund, mandate: CONNECTED.mandate, withdraw: CONNECTED.withdraw },
+    };
+  }
 
   /** Balances are derived from ledger entries; only the caller's own accounts, from the session. */
   @Get()

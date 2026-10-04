@@ -593,6 +593,32 @@
         ]
       }
     },
+    "/api/v1/kyc": {
+      "get": {
+        "operationId": "KycController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KycResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "kyc"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login",
@@ -823,6 +849,32 @@
         ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/wallet/rails": {
+      "get": {
+        "operationId": "WalletController_rails",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RailsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
         ]
       }
     },
@@ -1067,6 +1119,24 @@
           "onboarded": {
             "type": "boolean",
             "description": "Country, goal, username and PIN are all set"
+          },
+          "kycStatus": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "kycTier": {
+            "type": "number",
+            "enum": [
+              0,
+              1,
+              2
+            ]
           }
         },
         "required": [
@@ -1079,7 +1149,9 @@
           "country",
           "goal",
           "hasPin",
-          "onboarded"
+          "onboarded",
+          "kycStatus",
+          "kycTier"
         ]
       },
       "UpdateProfileDto": {
@@ -1140,6 +1212,95 @@
         },
         "required": [
           "pin"
+        ]
+      },
+      "KycStepResponse": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "enum": [
+              "id",
+              "selfie",
+              "address",
+              "location",
+              "bank",
+              "national_check"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "description": "False for the optional national check (BVN in Nigeria)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "reason": {
+            "type": "object",
+            "nullable": true,
+            "description": "Why a step was refused, in words for the person"
+          }
+        },
+        "required": [
+          "step",
+          "required",
+          "status",
+          "reason"
+        ]
+      },
+      "KycResponse": {
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean",
+            "description": "False until an identity partner is connected: steps cannot be sent"
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "NG",
+              "GB"
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "tier": {
+            "type": "number",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "description": "2 once the national check is also approved"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KycStepResponse"
+            }
+          }
+        },
+        "required": [
+          "connected",
+          "country",
+          "status",
+          "tier",
+          "steps"
         ]
       },
       "TokenPairResponse": {
@@ -1307,6 +1468,65 @@
         "required": [
           "password",
           "code"
+        ]
+      },
+      "RailsConnected": {
+        "type": "object",
+        "properties": {
+          "fund": {
+            "type": "boolean"
+          },
+          "mandate": {
+            "type": "boolean"
+          },
+          "withdraw": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fund",
+          "mandate",
+          "withdraw"
+        ]
+      },
+      "RailsResponse": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "enum": [
+              "NG",
+              "GB"
+            ],
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "NGN",
+              "GBP"
+            ],
+            "nullable": true,
+            "description": "The wallet's currency"
+          },
+          "kycApproved": {
+            "type": "boolean",
+            "description": "Identity checks are approved, so money can move"
+          },
+          "connected": {
+            "description": "Which payment actions have a connected partner behind them",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RailsConnected"
+              }
+            ]
+          }
+        },
+        "required": [
+          "country",
+          "currency",
+          "kycApproved",
+          "connected"
         ]
       },
       "MoneyResponse": {

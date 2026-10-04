@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { KycModule } from "../kyc/kyc.module.js";
 import { DevicesService } from "./devices.service.js";
 import { EmailVerification } from "./email-verification.service.js";
 import { MeController } from "./me.controller.js";
@@ -12,6 +13,7 @@ import { TrustedDevicesService } from "./trusted-devices.service.js";
 import { UsernameService } from "./username.service.js";
 
 @Module({
+  imports: [KycModule],
   controllers: [SignUpController, PasswordResetController, MeController],
   providers: [
     PasswordHasher,
