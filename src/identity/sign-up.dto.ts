@@ -42,7 +42,7 @@ export class SignUpDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^[A-Za-z0-9]{8}$/)
+  @Matches(/^[A-Za-z0-9][A-Za-z0-9_-]{2,18}[A-Za-z0-9]$/)
   invite?: string;
 }
 

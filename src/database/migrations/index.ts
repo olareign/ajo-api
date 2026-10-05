@@ -10,6 +10,9 @@ import { AddUsername1790900050000 } from "./1790900050000-add-username.js";
 import { AddLoginDevices1790900060000 } from "./1790900060000-add-login-devices.js";
 import { AddTrustedDevices1790900070000 } from "./1790900070000-add-trusted-devices.js";
 import { AddKycOverride1790900140000 } from "./1790900140000-add-kyc-override.js";
+import { CustomInviteCodes1790900150000 } from "./1790900150000-custom-invite-codes.js";
+import { AccountSecurity1790900160000 } from "./1790900160000-account-security.js";
+import { ProfileSettings1790900170000 } from "./1790900170000-profile-settings.js";
 import { CreateKycSteps1790900080000 } from "./1790900080000-create-kyc-steps.js";
 import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js";
 import { CreateNotifications1790900100000 } from "./1790900100000-create-notifications.js";
@@ -39,4 +42,7 @@ export const migrations = [
   CreateFriends1790900120000,
   CreateGroups1790900130000,
   AddKycOverride1790900140000,
+  CustomInviteCodes1790900150000,
+  AccountSecurity1790900160000,
+  ProfileSettings1790900170000,
 ];

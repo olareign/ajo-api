@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -6,12 +7,18 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import type { AccessClaims } from "../auth/access-tokens.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
-import { NotificationsQuery, NotificationsResponse } from "./notifications.dto.js";
+import {
+  NotificationSettingsDto,
+  NotificationSettingsResponse,
+  NotificationsQuery,
+  NotificationsResponse,
+} from "./notifications.dto.js";
 import { Notifications } from "./notifications.service.js";
 
 const DEFAULT_LIMIT = 20;
@@ -22,6 +29,22 @@ const MAX_LIMIT = 50;
 @Controller("notifications")
 export class NotificationsController {
   constructor(private readonly notifications: Notifications) {}
+
+  /** Which optional emails the caller gets. */
+  @Get("settings")
+  @ApiOkResponse({ type: NotificationSettingsResponse })
+  settings(@CurrentUser() auth: AccessClaims): Promise<NotificationSettingsResponse> {
+    return this.notifications.settings(auth.userId);
+  }
+
+  @Put("settings")
+  @ApiOkResponse({ type: NotificationSettingsResponse })
+  updateSettings(
+    @CurrentUser() auth: AccessClaims,
+    @Body() body: NotificationSettingsDto,
+  ): Promise<NotificationSettingsResponse> {
+    return this.notifications.updateSettings(auth.userId, body);
+  }
 
   /** The caller's own messages, newest first, a page at a time, with how many are unread. */
   @Get()

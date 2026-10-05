@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
@@ -19,8 +20,10 @@ import { Discovery } from "./discovery.service.js";
 import {
   BlockedResponse,
   FriendsResponse,
+  InviteCodeDto,
   InviteResponse,
   PersonResponse,
+  ReferralResponse,
   RelationResponse,
   ReportDto,
   RequestsResponse,
@@ -145,6 +148,24 @@ export class FriendsController {
   @ApiOkResponse({ type: InviteResponse })
   invite(@CurrentUser() auth: AccessClaims): Promise<InviteResponse> {
     return this.invites.mine(auth.userId);
+  }
+
+  /** Chooses your own invite code; the old link stops working. */
+  @Put("invite")
+  @Throttle({ default: { limit: 10, ttl: MINUTE } })
+  @ApiOkResponse({ type: InviteResponse })
+  setInvite(
+    @CurrentUser() auth: AccessClaims,
+    @Body() body: InviteCodeDto,
+  ): Promise<InviteResponse> {
+    return this.invites.setCode(auth.userId, body.code);
+  }
+
+  /** The people who joined through your invite. */
+  @Get("referrals")
+  @ApiOkResponse({ type: [ReferralResponse] })
+  referrals(@CurrentUser() auth: AccessClaims): Promise<ReferralResponse[]> {
+    return this.invites.referrals(auth.userId);
   }
 
   /** Asks someone to be friends; asking twice changes nothing, and if they had asked you this accepts. */

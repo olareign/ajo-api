@@ -8,6 +8,7 @@ import { TrustedDevicesService } from "../identity/trusted-devices.service.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { AccessTokens } from "./access-tokens.js";
 import { MfaService, type CodeInput } from "./mfa.service.js";
+import { recordSecurityEvent } from "../identity/security-events.js";
 
 export const MAX_FAILED_LOGINS = 10;
 export const LOCKOUT_MINUTES = 15;
@@ -225,12 +226,16 @@ export class SessionService {
 
   /** Also forgets every remembered device: someone who lost one should not be trusted on it. */
   async logoutAll(userId: string): Promise<void> {
-    await this.trusted.forgetAll(userId);
-    await this.db.query(
-      `UPDATE sessions SET revoked_at = now(), revoked_reason = 'logout_all'
-        WHERE user_id = $1 AND revoked_at IS NULL`,
-      [userId],
-    );
+    await this.db.transaction(async (tx) => {
+      await this.trusted.forgetAllIn(tx, userId);
+      await sql(
+        tx,
+        `UPDATE sessions SET revoked_at = now(), revoked_reason = 'logout_all'
+          WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId],
+      );
+      await recordSecurityEvent(tx, userId, "signed_out_everywhere");
+    });
   }
 
   private async createSession(
@@ -254,6 +259,8 @@ export class SessionService {
       [userId, MAX_ACTIVE_SESSIONS],
     );
     const device = await this.devices.record(tx, userId, client.userAgent, client.ip);
+    await recordSecurityEvent(tx, userId, "signed_in", client);
+    if (device.alert) await recordSecurityEvent(tx, userId, "new_device", client);
     return {
       sessionId: session!.id,
       refreshToken: await this.issueRefreshToken(tx, session!.id),

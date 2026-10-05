@@ -438,6 +438,55 @@
         ]
       }
     },
+    "/api/v1/me/phone": {
+      "put": {
+        "operationId": "MeController_setPhone",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Another account has that number (`phone_taken`)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      },
+      "delete": {
+        "operationId": "MeController_removePhone",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/me/profile": {
       "put": {
         "operationId": "MeController_updateProfile",
@@ -852,6 +901,283 @@
         ]
       }
     },
+    "/api/v1/me/security/password": {
+      "post": {
+        "operationId": "SecurityController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/pin": {
+      "post": {
+        "operationId": "SecurityController_changePin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/pin/reset": {
+      "post": {
+        "operationId": "SecurityController_resetPin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/recovery-codes": {
+      "post": {
+        "operationId": "SecurityController_renewRecoveryCodes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesOnlyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/sessions": {
+      "get": {
+        "operationId": "SecurityController_sessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/sessions/{id}": {
+      "delete": {
+        "operationId": "SecurityController_signOutDevice",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/trusted-devices": {
+      "get": {
+        "operationId": "SecurityController_trustedDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/trusted-devices/{id}": {
+      "delete": {
+        "operationId": "SecurityController_forgetDevice",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/close": {
+      "post": {
+        "operationId": "SecurityController_close",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/events": {
+      "get": {
+        "operationId": "SecurityController_events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SecurityEventResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
     "/api/v1/friends/search": {
       "get": {
         "operationId": "FriendsController_search",
@@ -1070,6 +1396,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InviteResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      },
+      "put": {
+        "operationId": "FriendsController_setInvite",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/referrals": {
+      "get": {
+        "operationId": "FriendsController_referrals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralResponse"
+                  }
                 }
               }
             }
@@ -2303,6 +2698,66 @@
         ]
       }
     },
+    "/api/v1/notifications/settings": {
+      "get": {
+        "operationId": "NotificationsController_settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationsController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "NotificationsController_list",
@@ -3001,6 +3456,24 @@
               "hold"
             ],
             "description": "Whether kycStatus comes from the checks, an approval without them, or a hold"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+2348031234567",
+            "description": "International form"
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "False until SMS checks arrive"
+          },
+          "trust": {
+            "type": "object",
+            "description": "Standing in circles: new, building or trusted, and a score out of 100",
+            "example": {
+              "level": "building",
+              "score": 25
+            }
           }
         },
         "required": [
@@ -3016,7 +3489,23 @@
           "onboarded",
           "kycStatus",
           "kycTier",
-          "kycVia"
+          "kycVia",
+          "phone",
+          "phoneVerified",
+          "trust"
+        ]
+      },
+      "PhoneDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0803 123 4567",
+            "description": "Local (read by the account's country) or international"
+          }
+        },
+        "required": [
+          "phone"
         ]
       },
       "UpdateProfileDto": {
@@ -3351,6 +3840,209 @@
           "code"
         ]
       },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Checked as at sign-up"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code, when it is on"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "ChangePinDto": {
+        "type": "object",
+        "properties": {
+          "currentPin": {
+            "type": "string",
+            "description": "Six digits"
+          },
+          "newPin": {
+            "type": "string",
+            "description": "Six digits"
+          }
+        },
+        "required": [
+          "currentPin",
+          "newPin"
+        ]
+      },
+      "ResetPinDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code"
+          },
+          "newPin": {
+            "type": "string",
+            "description": "Six digits"
+          }
+        },
+        "required": [
+          "password",
+          "code",
+          "newPin"
+        ]
+      },
+      "StepUpDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ]
+      },
+      "RecoveryCodesOnlyResponse": {
+        "type": "object",
+        "properties": {
+          "recoveryCodes": {
+            "description": "Shown once; the old set no longer works",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "recoveryCodes"
+        ]
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string",
+            "example": "Chrome on Android"
+          },
+          "ip": {
+            "type": "object",
+            "nullable": true,
+            "example": "102.89.x.x",
+            "description": "The first part only"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "The device asking"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "ip",
+          "createdAt",
+          "lastSeenAt",
+          "current"
+        ]
+      },
+      "TrustedDeviceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "lastUsedAt",
+          "expiresAt"
+        ]
+      },
+      "CloseAccountDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code, when it is on"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "SecurityEventResponse": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "signed_in",
+              "new_device",
+              "password_changed",
+              "password_reset",
+              "pin_changed",
+              "pin_reset",
+              "mfa_on",
+              "mfa_off",
+              "recovery_codes_renewed",
+              "device_signed_out",
+              "signed_out_everywhere",
+              "device_forgotten"
+            ]
+          },
+          "device": {
+            "type": "object",
+            "nullable": true
+          },
+          "ip": {
+            "type": "object",
+            "nullable": true,
+            "description": "The first part only"
+          },
+          "at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "device",
+          "ip",
+          "at"
+        ]
+      },
       "TrustResponse": {
         "type": "object",
         "properties": {
@@ -3585,6 +4277,39 @@
         "required": [
           "code",
           "link"
+        ]
+      },
+      "InviteCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ADA-SAVES",
+            "description": "4-20 letters, numbers, - or _; not case-sensitive"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "ReferralResponse": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "username": {
+            "type": "object",
+            "nullable": true
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName",
+          "username",
+          "joinedAt"
         ]
       },
       "UsernameDto": {
@@ -4573,6 +5298,50 @@
           "bankCode",
           "accountNumber"
         ]
+      },
+      "NotificationSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "reminders": {
+            "type": "boolean",
+            "description": "Reminders before a debit or a circle payment"
+          },
+          "savings": {
+            "type": "boolean",
+            "description": "News about saving plans (not money moving)"
+          },
+          "circles": {
+            "type": "boolean",
+            "description": "News about circles (not money moving)"
+          },
+          "friends": {
+            "type": "boolean",
+            "description": "Friend requests and answers"
+          }
+        },
+        "required": [
+          "reminders",
+          "savings",
+          "circles",
+          "friends"
+        ]
+      },
+      "NotificationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "reminders": {
+            "type": "boolean"
+          },
+          "savings": {
+            "type": "boolean"
+          },
+          "circles": {
+            "type": "boolean"
+          },
+          "friends": {
+            "type": "boolean"
+          }
+        }
       },
       "NotificationResponse": {
         "type": "object",

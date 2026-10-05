@@ -6,6 +6,7 @@ import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { notificationEmail } from "../identity/emails.js";
 import { Scheduler } from "../scheduler/scheduler.service.js";
+import { emailCategory, type EmailCategory } from "./email-categories.js";
 
 type Tx = Parameters<typeof sql>[0];
 
@@ -57,8 +58,14 @@ export class Notifications implements OnModuleInit {
 
   /** Returns whether it was new (false: this person already had this message). */
   async notify(userId: string, message: NewNotification, within?: Tx): Promise<boolean> {
+    // An optional email the person turned off is kept in the app only; money and account emails always go.
     const text = `INSERT INTO notifications (user_id, kind, title, body, link, dedupe_key, email_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       VALUES ($1, $2, $3, $4, $5, $6,
+         CASE WHEN $7::text = 'pending' AND $8::text IS NOT NULL AND EXISTS (
+           SELECT 1 FROM notification_settings s WHERE s.user_id = $1 AND NOT CASE $8::text
+             WHEN 'reminders' THEN s.reminders WHEN 'savings' THEN s.savings
+             WHEN 'circles' THEN s.circles WHEN 'friends' THEN s.friends ELSE true END)
+         THEN 'none' ELSE $7::text END)
        ON CONFLICT (user_id, dedupe_key) DO NOTHING RETURNING id`;
     const params = [
       userId,
@@ -68,11 +75,38 @@ export class Notifications implements OnModuleInit {
       message.link ?? null,
       message.dedupeKey,
       message.email ? "pending" : "none",
+      emailCategory(message.kind),
     ];
     const rows = within
       ? await sql<{ id: string }>(within, text, params)
       : await this.db.query<{ id: string }[]>(text, params);
     return rows.length > 0;
+  }
+
+  /** Which optional emails the person gets; all on until they say otherwise. */
+  async settings(userId: string): Promise<Record<EmailCategory, boolean>> {
+    const [row] = await this.db.query<Record<EmailCategory, boolean>[]>(
+      `SELECT reminders, savings, circles, friends FROM notification_settings WHERE user_id = $1`,
+      [userId],
+    );
+    return row ?? { reminders: true, savings: true, circles: true, friends: true };
+  }
+
+  async updateSettings(
+    userId: string,
+    change: Partial<Record<EmailCategory, boolean>>,
+  ): Promise<Record<EmailCategory, boolean>> {
+    const current = await this.settings(userId);
+    // A validated DTO carries absent keys as undefined; only the ones sent may change a setting.
+    const sent = Object.entries(change).filter(([, on]) => typeof on === "boolean");
+    const next = { ...current, ...Object.fromEntries(sent) };
+    await this.db.query(
+      `INSERT INTO notification_settings (user_id, reminders, savings, circles, friends)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id) DO UPDATE SET reminders = $2, savings = $3, circles = $4, friends = $5, updated_at = now()`,
+      [userId, next.reminders, next.savings, next.circles, next.friends],
+    );
+    return next;
   }
 
   async list(userId: string, limit: number, before?: string) {

@@ -118,7 +118,12 @@ describe("invite links", () => {
     await request(h.t.http())
       .post("/api/v1/auth/sign-up")
       .set("X-Forwarded-For", newIp())
-      .send({ email: uniqueEmail(), password: GOOD_PASSWORD, displayName: "x", invite: "short" })
+      .send({
+        email: uniqueEmail(),
+        password: GOOD_PASSWORD,
+        displayName: "x",
+        invite: "no spaces!",
+      })
       .expect(400);
 
     const [goodUser] = await h.t.db.query("SELECT id FROM users WHERE email = $1", [good.email]);

@@ -230,3 +230,39 @@ export function notificationEmail(input: {
     button: { label: "Open Àjọ", href: input.link },
   });
 }
+
+/**
+ * A change to the account's security settings (password, PIN), so the person hears about it at once
+ * and can act if it wasn't them.
+ */
+export function securityChangeEmail(input: {
+  name: string;
+  what: string;
+  detail: string;
+  link: string;
+}): Email {
+  return email(`Your Àjọ ${input.what} was changed`, {
+    preheader: `Your ${input.what} was just changed. ${input.detail}`,
+    heading: `Your ${input.what} was changed`,
+    paragraphs: [
+      `Hi ${input.name},`,
+      `The ${input.what} on your Àjọ account was just changed.`,
+      input.detail,
+    ],
+    button: { label: "Review my security", href: input.link },
+    note: "If this wasn't you, sign out of all devices from the Me screen and reset your password straight away.",
+  });
+}
+
+export function accountClosedEmail(input: { name: string; supportLink: string }): Email {
+  return email("Your Àjọ account is closed", {
+    preheader: "Your account is closed and every device has been signed out.",
+    heading: "Your account is closed",
+    paragraphs: [
+      `Hi ${input.name},`,
+      "Your Àjọ account was closed just now, and every device was signed out. Records we must keep by law are kept safely.",
+    ],
+    button: { label: "Contact us", href: input.supportLink },
+    note: "If you didn't close your account, contact us straight away.",
+  });
+}

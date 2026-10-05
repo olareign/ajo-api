@@ -1,6 +1,7 @@
 import { sql } from "../database/sql.js";
 
-export const INVITE_CODE = /^[A-Z0-9]{8}$/;
+/** 4-20 letters, numbers, - or _, starting and ending with a letter or number; stored in capitals. */
+export const INVITE_CODE = /^[A-Z0-9][A-Z0-9_-]{2,18}[A-Z0-9]$/;
 
 /**
  * Remembers who invited someone new, inside the transaction that creates them. A code that means

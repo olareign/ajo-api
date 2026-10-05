@@ -734,6 +734,66 @@ CREATE TRIGGER users_log_kyc_override
   FOR EACH ROW WHEN (OLD.kyc_override IS DISTINCT FROM NEW.kyc_override)
   EXECUTE FUNCTION log_kyc_override();
 
+-- 1790900150000 CustomInviteCodes ------------------------------------------------------------
+-- People choose their own invite code (4-20 letters, numbers, - or _, in capitals); each change is
+-- kept, which limits how often it changes and holds a given-up code for its owner for 90 days.
+ALTER TABLE invite_links DROP CONSTRAINT IF EXISTS invite_links_code_check;
+ALTER TABLE invite_links
+  ADD CONSTRAINT invite_links_code_check CHECK (code ~ '^[A-Z0-9][A-Z0-9_-]{2,18}[A-Z0-9]$');
+CREATE TABLE IF NOT EXISTS invite_code_changes (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  old_code text NOT NULL,
+  new_code text NOT NULL,
+  changed_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS invite_code_changes_user_idx ON invite_code_changes (user_id, changed_at);
+CREATE INDEX IF NOT EXISTS invite_code_changes_old_code_idx ON invite_code_changes (old_code, changed_at);
+
+-- 1790900160000 AccountSecurity --------------------------------------------------------------
+-- A record of what happens to an account (sign-ins, new devices, password, PIN and authenticator
+-- changes), and two more reasons a session ends.
+ALTER TABLE sessions DROP CONSTRAINT IF EXISTS sessions_revoked_reason_check;
+ALTER TABLE sessions ADD CONSTRAINT sessions_revoked_reason_check CHECK (revoked_reason IN
+  ('logout', 'logout_all', 'refresh_reuse', 'password_reset', 'admin', 'session_limit',
+   'password_changed', 'signed_out_by_user'));
+CREATE TABLE IF NOT EXISTS security_events (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN (
+    'signed_in', 'new_device', 'password_changed', 'password_reset', 'pin_changed',
+    'pin_reset', 'mfa_on', 'mfa_off', 'recovery_codes_renewed', 'device_signed_out',
+    'signed_out_everywhere', 'device_forgotten')),
+  device text CHECK (char_length(device) <= 100),
+  ip inet,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS security_events_user_idx ON security_events (user_id, created_at DESC, id DESC);
+
+-- 1790900170000 ProfileSettings --------------------------------------------------------------
+-- A phone number (not verified until SMS checks arrive), which optional emails a person wants, and
+-- closing an account. A closed account can't sign in; its records stay (the ledger is never touched).
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS phone text UNIQUE CHECK (phone ~ '^\+[1-9][0-9]{7,14}$'),
+  ADD COLUMN IF NOT EXISTS phone_verified_at timestamptz,
+  ADD COLUMN IF NOT EXISTS closed_at timestamptz;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+ALTER TABLE users
+  ADD CONSTRAINT users_status_check CHECK (status IN ('active', 'locked', 'suspended', 'closed'));
+CREATE TABLE IF NOT EXISTS notification_settings (
+  user_id uuid PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  reminders boolean NOT NULL DEFAULT true,
+  savings boolean NOT NULL DEFAULT true,
+  circles boolean NOT NULL DEFAULT true,
+  friends boolean NOT NULL DEFAULT true,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE security_events DROP CONSTRAINT IF EXISTS security_events_kind_check;
+ALTER TABLE security_events ADD CONSTRAINT security_events_kind_check CHECK (kind IN (
+  'signed_in', 'new_device', 'password_changed', 'password_reset', 'pin_changed',
+  'pin_reset', 'mfa_on', 'mfa_off', 'recovery_codes_renewed', 'device_signed_out',
+  'signed_out_everywhere', 'device_forgotten', 'phone_changed', 'account_closed'));
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -763,14 +823,17 @@ SELECT v.ts, v.name
     (1790900110000::bigint, 'CreateSavings1790900110000'),
     (1790900120000::bigint, 'CreateFriends1790900120000'),
     (1790900130000::bigint, 'CreateGroups1790900130000'),
-    (1790900140000::bigint, 'AddKycOverride1790900140000')
+    (1790900140000::bigint, 'AddKycOverride1790900140000'),
+    (1790900150000::bigint, 'CustomInviteCodes1790900150000'),
+    (1790900160000::bigint, 'AccountSecurity1790900160000'),
+    (1790900170000::bigint, 'ProfileSettings1790900170000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all nineteen migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-two migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))
