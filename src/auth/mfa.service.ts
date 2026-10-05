@@ -10,6 +10,7 @@ import { DataSource } from "typeorm";
 import { FieldEncryption } from "../crypto/field-encryption.js";
 import { sql } from "../database/sql.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
+import { recordSecurityEvent } from "../identity/security-events.js";
 import { TrustedDevicesService } from "../identity/trusted-devices.service.js";
 import { createOneTimeToken, hashToken } from "../identity/tokens.js";
 import { generateRecoveryCodes, hashRecoveryCode } from "./recovery-codes.js";
@@ -23,6 +24,9 @@ export const WRONG_CODE = "That code is incorrect.";
 export const CHALLENGE_DEAD = "That sign-in took too long. Please start again.";
 export const MFA_LOCKED = "Too many wrong codes. Try again in 15 minutes.";
 const WRONG_PASSWORD = "That password is incorrect.";
+
+/** What a step-up check found. Worked out inside the transaction, refused after it is saved. */
+export type StepUp = "ok" | "wrong_password" | "mfa_required" | "no_code" | "locked" | "wrong_code";
 
 type Tx = Parameters<typeof sql>[0];
 export type CodeInput = Readonly<{ code?: string; recoveryCode?: string }>;
@@ -122,6 +126,7 @@ export class MfaService {
         ]);
       }
       deviceToken = await this.trusted.remember(tx, userId, userAgent);
+      await recordSecurityEvent(tx, userId, "mfa_on", { userAgent });
       return "ok" as const;
     });
     if (outcome === "already")
@@ -160,6 +165,7 @@ export class MfaService {
       await this.trusted.forgetAllIn(tx, userId);
       await sql(tx, `DELETE FROM mfa_recovery_codes WHERE user_id = $1`, [userId]);
       await sql(tx, `DELETE FROM user_mfa WHERE user_id = $1`, [userId]);
+      await recordSecurityEvent(tx, userId, "mfa_off");
       return "ok" as const;
     });
     if (outcome === "not_enabled")
@@ -240,6 +246,111 @@ export class MfaService {
       throw new UnauthorizedException({ message: MFA_LOCKED, code: "mfa_locked" });
     }
     throw new UnauthorizedException({ message: WRONG_CODE, code: "mfa_code_wrong" });
+  }
+
+  /**
+   * "Is it really you?" for changes to the account itself: the password, and a fresh authenticator
+   * code when it is on (always, when `codeRequired`). The code follows the money gate's rules (used
+   * once, wrong ones count towards the same lockout). Runs inside the caller's transaction and only
+   * reports: the caller refuses after the transaction is saved, so a wrong code still counts.
+   */
+  async stepUp(
+    tx: Tx,
+    userId: string,
+    password: string,
+    code: string | undefined,
+    codeRequired = false,
+  ): Promise<StepUp> {
+    const [user] = await sql<{ password_hash: string }>(
+      tx,
+      `SELECT password_hash FROM users WHERE id = $1 FOR UPDATE`,
+      [userId],
+    );
+    if (!user || !(await this.hasher.verify(user.password_hash, password))) return "wrong_password";
+    const [mfa] = await sql<{
+      totp_secret: string;
+      last_used_step: string | null;
+      failed_attempts: number;
+      locked: boolean;
+    }>(
+      tx,
+      `SELECT totp_secret, last_used_step, failed_attempts,
+              coalesce(locked_until > now(), false) AS locked
+         FROM user_mfa WHERE user_id = $1 AND confirmed_at IS NOT NULL FOR UPDATE`,
+      [userId],
+    );
+    if (!mfa) return codeRequired ? "mfa_required" : "ok";
+    if (!code) return "no_code";
+    if (mfa.locked) return "locked";
+    const check = this.totp.verify(
+      this.encryption.decrypt(mfa.totp_secret, this.context(userId)),
+      code,
+      mfa.last_used_step === null ? null : Number(mfa.last_used_step),
+    );
+    if (check.ok) {
+      await sql(
+        tx,
+        `UPDATE user_mfa SET last_used_step = $2, failed_attempts = 0 WHERE user_id = $1`,
+        [userId, check.step],
+      );
+      return "ok";
+    }
+    const failures = mfa.failed_attempts + 1;
+    const lock = failures >= MAX_FAILED_CODES;
+    await sql(
+      tx,
+      `UPDATE user_mfa
+          SET failed_attempts = $2::int,
+              locked_until = CASE WHEN $3::boolean THEN now() + make_interval(mins => $4::int) ELSE locked_until END
+        WHERE user_id = $1`,
+      [userId, lock ? 0 : failures, lock, MFA_LOCKOUT_MINUTES],
+    );
+    return "wrong_code";
+  }
+
+  /** Turns a step-up result that is not "ok" into the answer the person sees. */
+  static refuse(outcome: Exclude<StepUp, "ok">): never {
+    // Each carries a `code`, so the web app treats it as a refused answer, not an ended session.
+    if (outcome === "wrong_password")
+      throw new UnauthorizedException({ message: WRONG_PASSWORD, code: "password_wrong" });
+    if (outcome === "mfa_required")
+      throw new ForbiddenException({
+        message: "Turn on the authenticator app first.",
+        code: "mfa_enrolment_required",
+      });
+    if (outcome === "no_code")
+      throw new UnauthorizedException({
+        message: "Enter the code from your authenticator app.",
+        code: "mfa_code_required",
+      });
+    if (outcome === "locked")
+      throw new UnauthorizedException({ message: MFA_LOCKED, code: "mfa_locked" });
+    throw new UnauthorizedException({ message: WRONG_CODE, code: "mfa_code_wrong" });
+  }
+
+  /** A new set of recovery codes, shown once; the old set stops working. Password and code first. */
+  async renewRecoveryCodes(
+    userId: string,
+    password: string,
+    code: string,
+    client: Readonly<{ ip?: string; userAgent?: string }>,
+  ): Promise<string[]> {
+    const codes = generateRecoveryCodes();
+    const outcome = await this.db.transaction(async (tx) => {
+      const check = await this.stepUp(tx, userId, password, code, true);
+      if (check !== "ok") return check;
+      await sql(tx, `DELETE FROM mfa_recovery_codes WHERE user_id = $1`, [userId]);
+      for (const recoveryCode of codes) {
+        await sql(tx, `INSERT INTO mfa_recovery_codes (user_id, code_hash) VALUES ($1, $2)`, [
+          userId,
+          hashRecoveryCode(recoveryCode),
+        ]);
+      }
+      await recordSecurityEvent(tx, userId, "recovery_codes_renewed", client);
+      return "ok" as const;
+    });
+    if (outcome !== "ok") MfaService.refuse(outcome);
+    return codes;
   }
 
   /** After the password is right: a short-lived, single-use token that carries the sign-in to step two. */

@@ -10,6 +10,7 @@ import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { passwordChangedEmail, passwordResetEmail } from "./emails.js";
 import { PasswordHasher } from "./password-hasher.js";
+import { recordSecurityEvent } from "./security-events.js";
 import { TrustedDevicesService } from "./trusted-devices.service.js";
 import { checkPassword } from "./password-policy.js";
 import { INVALID_LINK } from "./sign-up.service.js";
@@ -136,6 +137,7 @@ export class PasswordResetService {
       );
       // A new password means the old one may have been known to someone: no device stays trusted.
       await this.trusted.forgetAllIn(tx, link.user_id);
+      await recordSecurityEvent(tx, link.user_id, "password_reset");
       await sql(
         tx,
         `UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`,

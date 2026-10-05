@@ -4,18 +4,20 @@ import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
 import { IdentityModule } from "../identity/identity.module.js";
 import { AccessTokens } from "./access-tokens.js";
+import { AccountSecurity } from "./account-security.service.js";
 import { FieldEncryption } from "../crypto/field-encryption.js";
 import { AuthController } from "./auth.controller.js";
 import { AuthGuard } from "./auth.guard.js";
 import { MfaController } from "./mfa.controller.js";
 import { MfaService } from "./mfa.service.js";
 import { MoneyActionGuard } from "./money-action.guard.js";
+import { SecurityController } from "./security.controller.js";
 import { SessionService } from "./session.service.js";
 import { Totp } from "./totp.js";
 
 @Module({
   imports: [IdentityModule],
-  controllers: [AuthController, MfaController],
+  controllers: [AuthController, MfaController, SecurityController],
   providers: [
     {
       provide: AccessTokens,
@@ -29,6 +31,7 @@ import { Totp } from "./totp.js";
     },
     { provide: Totp, useValue: new Totp() },
     MfaService,
+    AccountSecurity,
     MoneyActionGuard,
     SessionService,
     { provide: APP_GUARD, useClass: AuthGuard },

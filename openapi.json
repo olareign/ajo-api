@@ -852,6 +852,254 @@
         ]
       }
     },
+    "/api/v1/me/security/password": {
+      "post": {
+        "operationId": "SecurityController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/pin": {
+      "post": {
+        "operationId": "SecurityController_changePin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/pin/reset": {
+      "post": {
+        "operationId": "SecurityController_resetPin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/recovery-codes": {
+      "post": {
+        "operationId": "SecurityController_renewRecoveryCodes",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesOnlyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/sessions": {
+      "get": {
+        "operationId": "SecurityController_sessions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/sessions/{id}": {
+      "delete": {
+        "operationId": "SecurityController_signOutDevice",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/trusted-devices": {
+      "get": {
+        "operationId": "SecurityController_trustedDevices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrustedDeviceResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/trusted-devices/{id}": {
+      "delete": {
+        "operationId": "SecurityController_forgetDevice",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/events": {
+      "get": {
+        "operationId": "SecurityController_events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SecurityEventResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
     "/api/v1/friends/search": {
       "get": {
         "operationId": "FriendsController_search",
@@ -3418,6 +3666,194 @@
         "required": [
           "password",
           "code"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Checked as at sign-up"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code, when it is on"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "ChangePinDto": {
+        "type": "object",
+        "properties": {
+          "currentPin": {
+            "type": "string",
+            "description": "Six digits"
+          },
+          "newPin": {
+            "type": "string",
+            "description": "Six digits"
+          }
+        },
+        "required": [
+          "currentPin",
+          "newPin"
+        ]
+      },
+      "ResetPinDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code"
+          },
+          "newPin": {
+            "type": "string",
+            "description": "Six digits"
+          }
+        },
+        "required": [
+          "password",
+          "code",
+          "newPin"
+        ]
+      },
+      "StepUpDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ]
+      },
+      "RecoveryCodesOnlyResponse": {
+        "type": "object",
+        "properties": {
+          "recoveryCodes": {
+            "description": "Shown once; the old set no longer works",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "recoveryCodes"
+        ]
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string",
+            "example": "Chrome on Android"
+          },
+          "ip": {
+            "type": "object",
+            "nullable": true,
+            "example": "102.89.x.x",
+            "description": "The first part only"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean",
+            "description": "The device asking"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "ip",
+          "createdAt",
+          "lastSeenAt",
+          "current"
+        ]
+      },
+      "TrustedDeviceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "device",
+          "lastUsedAt",
+          "expiresAt"
+        ]
+      },
+      "SecurityEventResponse": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "signed_in",
+              "new_device",
+              "password_changed",
+              "password_reset",
+              "pin_changed",
+              "pin_reset",
+              "mfa_on",
+              "mfa_off",
+              "recovery_codes_renewed",
+              "device_signed_out",
+              "signed_out_everywhere",
+              "device_forgotten"
+            ]
+          },
+          "device": {
+            "type": "object",
+            "nullable": true
+          },
+          "ip": {
+            "type": "object",
+            "nullable": true,
+            "description": "The first part only"
+          },
+          "at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "device",
+          "ip",
+          "at"
         ]
       },
       "TrustResponse": {

@@ -33,6 +33,10 @@ export class CustomInviteCodes1790900150000 implements MigrationInterface {
   async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE invite_code_changes`);
     await queryRunner.query(`ALTER TABLE invite_links DROP CONSTRAINT invite_links_code_check`);
+    // Chosen codes don't fit the old shape: they get a made-up one (8 capitals and digits) again.
+    await queryRunner.query(`
+      UPDATE invite_links SET code = upper(substr(md5(random()::text || user_id::text), 1, 8))
+       WHERE code !~ '^[A-Z0-9]{8}$'`);
     await queryRunner.query(
       `ALTER TABLE invite_links ADD CONSTRAINT invite_links_code_check CHECK (code ~ '^[A-Z0-9]{8}$')`,
     );

@@ -750,6 +750,26 @@ CREATE TABLE IF NOT EXISTS invite_code_changes (
 CREATE INDEX IF NOT EXISTS invite_code_changes_user_idx ON invite_code_changes (user_id, changed_at);
 CREATE INDEX IF NOT EXISTS invite_code_changes_old_code_idx ON invite_code_changes (old_code, changed_at);
 
+-- 1790900160000 AccountSecurity --------------------------------------------------------------
+-- A record of what happens to an account (sign-ins, new devices, password, PIN and authenticator
+-- changes), and two more reasons a session ends.
+ALTER TABLE sessions DROP CONSTRAINT IF EXISTS sessions_revoked_reason_check;
+ALTER TABLE sessions ADD CONSTRAINT sessions_revoked_reason_check CHECK (revoked_reason IN
+  ('logout', 'logout_all', 'refresh_reuse', 'password_reset', 'admin', 'session_limit',
+   'password_changed', 'signed_out_by_user'));
+CREATE TABLE IF NOT EXISTS security_events (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN (
+    'signed_in', 'new_device', 'password_changed', 'password_reset', 'pin_changed',
+    'pin_reset', 'mfa_on', 'mfa_off', 'recovery_codes_renewed', 'device_signed_out',
+    'signed_out_everywhere', 'device_forgotten')),
+  device text CHECK (char_length(device) <= 100),
+  ip inet,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS security_events_user_idx ON security_events (user_id, created_at DESC, id DESC);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -780,14 +800,15 @@ SELECT v.ts, v.name
     (1790900120000::bigint, 'CreateFriends1790900120000'),
     (1790900130000::bigint, 'CreateGroups1790900130000'),
     (1790900140000::bigint, 'AddKycOverride1790900140000'),
-    (1790900150000::bigint, 'CustomInviteCodes1790900150000')
+    (1790900150000::bigint, 'CustomInviteCodes1790900150000'),
+    (1790900160000::bigint, 'AccountSecurity1790900160000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-one migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))
