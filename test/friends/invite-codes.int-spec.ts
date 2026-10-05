@@ -77,7 +77,7 @@ describe("choosing your own invite code", () => {
       a.call("put", "/friends/invite").send({ code }),
       b.call("put", "/friends/invite").send({ code }),
     ]);
-    expect([ra.status, rb.status].sort()).toEqual([200, 409]);
+    expect([ra.status, rb.status].sort((x, y) => x - y)).toEqual([200, 409]);
     const owners = await h.t.db.query("SELECT user_id FROM invite_links WHERE code = $1", [code]);
     expect(owners).toHaveLength(1);
   });
