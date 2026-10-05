@@ -438,6 +438,55 @@
         ]
       }
     },
+    "/api/v1/me/phone": {
+      "put": {
+        "operationId": "MeController_setPhone",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "409": {
+            "description": "Another account has that number (`phone_taken`)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      },
+      "delete": {
+        "operationId": "MeController_removePhone",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/me/profile": {
       "put": {
         "operationId": "MeController_updateProfile",
@@ -1056,6 +1105,35 @@
       "delete": {
         "operationId": "SecurityController_forgetDevice",
         "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/api/v1/me/security/close": {
+      "post": {
+        "operationId": "SecurityController_close",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAccountDto"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": ""
@@ -2620,6 +2698,66 @@
         ]
       }
     },
+    "/api/v1/notifications/settings": {
+      "get": {
+        "operationId": "NotificationsController_settings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationsController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "NotificationsController_list",
@@ -3318,6 +3456,24 @@
               "hold"
             ],
             "description": "Whether kycStatus comes from the checks, an approval without them, or a hold"
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true,
+            "example": "+2348031234567",
+            "description": "International form"
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "False until SMS checks arrive"
+          },
+          "trust": {
+            "type": "object",
+            "description": "Standing in circles: new, building or trusted, and a score out of 100",
+            "example": {
+              "level": "building",
+              "score": 25
+            }
           }
         },
         "required": [
@@ -3333,7 +3489,23 @@
           "onboarded",
           "kycStatus",
           "kycTier",
-          "kycVia"
+          "kycVia",
+          "phone",
+          "phoneVerified",
+          "trust"
+        ]
+      },
+      "PhoneDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0803 123 4567",
+            "description": "Local (read by the account's country) or international"
+          }
+        },
+        "required": [
+          "phone"
         ]
       },
       "UpdateProfileDto": {
@@ -3814,6 +3986,21 @@
           "device",
           "lastUsedAt",
           "expiresAt"
+        ]
+      },
+      "CloseAccountDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "6-digit authenticator code, when it is on"
+          }
+        },
+        "required": [
+          "password"
         ]
       },
       "SecurityEventResponse": {
@@ -5111,6 +5298,50 @@
           "bankCode",
           "accountNumber"
         ]
+      },
+      "NotificationSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "reminders": {
+            "type": "boolean",
+            "description": "Reminders before a debit or a circle payment"
+          },
+          "savings": {
+            "type": "boolean",
+            "description": "News about saving plans (not money moving)"
+          },
+          "circles": {
+            "type": "boolean",
+            "description": "News about circles (not money moving)"
+          },
+          "friends": {
+            "type": "boolean",
+            "description": "Friend requests and answers"
+          }
+        },
+        "required": [
+          "reminders",
+          "savings",
+          "circles",
+          "friends"
+        ]
+      },
+      "NotificationSettingsDto": {
+        "type": "object",
+        "properties": {
+          "reminders": {
+            "type": "boolean"
+          },
+          "savings": {
+            "type": "boolean"
+          },
+          "circles": {
+            "type": "boolean"
+          },
+          "friends": {
+            "type": "boolean"
+          }
+        }
       },
       "NotificationResponse": {
         "type": "object",

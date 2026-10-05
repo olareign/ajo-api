@@ -19,6 +19,7 @@ import { MfaService } from "./mfa.service.js";
 import {
   ChangePasswordDto,
   ChangePinDto,
+  CloseAccountDto,
   IdParam,
   RecoveryCodesOnlyResponse,
   ResetPinDto,
@@ -132,6 +133,19 @@ export class SecurityController {
     @Req() req: Request,
   ): Promise<void> {
     await this.security.forgetDevice(auth.userId, params.id, client(req));
+  }
+
+  /** Closes the account once nothing is left in it. Password, and the code when the authenticator is on. */
+  @Post("close")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 5, ttl: FIFTEEN_MINUTES } })
+  @ApiNoContentResponse()
+  async close(
+    @CurrentUser() auth: AccessClaims,
+    @Body() body: CloseAccountDto,
+    @Req() req: Request,
+  ): Promise<void> {
+    await this.security.close(auth.userId, body, client(req));
   }
 
   @Get("events")

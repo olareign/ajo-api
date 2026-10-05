@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { DataSource } from "typeorm";
 import {
   BREACHED_PASSWORDS,
@@ -9,7 +16,7 @@ import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
 import { describeDevice } from "../identity/device.js";
-import { securityChangeEmail } from "../identity/emails.js";
+import { accountClosedEmail, securityChangeEmail } from "../identity/emails.js";
 import { PasswordHasher } from "../identity/password-hasher.js";
 import { checkPassword } from "../identity/password-policy.js";
 import { isAcceptablePin } from "../identity/pin-policy.js";
@@ -39,6 +46,17 @@ export type SecurityEventView = Readonly<{
   ip: string | null;
   at: string;
 }>;
+
+/** What stops an account closing, in the order a person would sort it out. */
+const CLOSE_BLOCKS = ["money", "plans", "circles", "payments", "mandate"] as const;
+type CloseBlock = (typeof CLOSE_BLOCKS)[number];
+const CLOSE_REASONS: Record<CloseBlock, string> = {
+  money: "Move all your money out first: your wallet, savings and deposits must be empty.",
+  plans: "End or finish your saving plans first.",
+  circles: "You're in a circle that is still going. You can close your account once it ends.",
+  payments: "A payment or withdrawal is still on its way. Try again once it has finished.",
+  mandate: "Cancel your auto-debit first.",
+};
 
 const BAD_PIN = "Choose a PIN that isn't a repeat, a run of digits or a pair.";
 
@@ -265,6 +283,75 @@ export class AccountSecurity {
       ip: maskIp(r.ip),
       at: r.created_at.toISOString(),
     }));
+  }
+
+  /**
+   * Closes the account, once nothing is left in it: no money in any of its accounts, no saving plan
+   * or circle going, no payment or withdrawal in flight, no auto-debit on. Asks again who it is. The
+   * account can't sign in after; every device is signed out and nothing stays remembered. Records the
+   * law requires (the ledger, identity checks) are kept.
+   */
+  async close(
+    userId: string,
+    input: Readonly<{ password: string; code?: string }>,
+    client: ClientContext,
+  ): Promise<void> {
+    const outcome = await this.db.transaction(async (tx) => {
+      const check = await this.mfa.stepUp(tx, userId, input.password, input.code);
+      if (check !== "ok") return check;
+      const [blocking] = await sql<Record<CloseBlock, boolean>>(
+        tx,
+        `SELECT
+           EXISTS (SELECT 1 FROM ledger_accounts a WHERE a.owner_type = 'user' AND a.owner_id = $1
+                     AND (SELECT coalesce(sum(CASE e.direction WHEN 'credit' THEN e.amount ELSE -e.amount END), 0)
+                            FROM ledger_entries e WHERE e.account_id = a.id) <> 0) AS money,
+           EXISTS (SELECT 1 FROM savings_plans WHERE user_id = $1 AND status IN ('active', 'paused')) AS plans,
+           EXISTS (SELECT 1 FROM group_members m JOIN groups g ON g.id = m.group_id
+                    WHERE m.user_id = $1 AND m.status = 'active' AND g.status IN ('open', 'picking', 'running')) AS circles,
+           EXISTS (SELECT 1 FROM payment_intents WHERE user_id = $1 AND status IN ('created', 'pending')) AS payments,
+           EXISTS (SELECT 1 FROM mandates WHERE user_id = $1 AND status IN ('pending', 'active')) AS mandate`,
+        [userId],
+      );
+      const block = CLOSE_BLOCKS.find((b) => blocking?.[b]);
+      if (block) return { block };
+      await sql(
+        tx,
+        `UPDATE users SET status = 'closed', closed_at = now(), updated_at = now() WHERE id = $1`,
+        [userId],
+      );
+      await sql(
+        tx,
+        `UPDATE sessions SET revoked_at = now(), revoked_reason = 'logout_all'
+          WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId],
+      );
+      await this.trusted.forgetAllIn(tx, userId);
+      await recordSecurityEvent(tx, userId, "account_closed", client);
+      return "ok" as const;
+    });
+    if (typeof outcome === "object")
+      throw new ConflictException({
+        message: CLOSE_REASONS[outcome.block],
+        code: `close_blocked_${outcome.block}`,
+      });
+    if (outcome !== "ok") MfaService.refuse(outcome);
+    void (async () => {
+      const [user] = await this.db.query<{ email: string; display_name: string }[]>(
+        `SELECT email, display_name FROM users WHERE id = $1`,
+        [userId],
+      );
+      if (!user) return;
+      await this.mailer.send({
+        to: user.email,
+        idempotencyKey: `closed-${userId}`,
+        ...accountClosedEmail({
+          name: user.display_name,
+          supportLink: `${this.env.WEB_APP_URL}/help`,
+        }),
+      });
+    })().catch((error: unknown) =>
+      this.logger.error({ err: error }, "Could not send the closing email"),
+    );
   }
 
   /** Emailed without waiting: the change is made either way, and a mail outage must not undo it. */

@@ -13,7 +13,9 @@ export type SecurityEventKind =
   | "recovery_codes_renewed"
   | "device_signed_out"
   | "signed_out_everywhere"
-  | "device_forgotten";
+  | "device_forgotten"
+  | "phone_changed"
+  | "account_closed";
 
 type Tx = Parameters<typeof sql>[0];
 

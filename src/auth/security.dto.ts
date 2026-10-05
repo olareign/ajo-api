@@ -86,3 +86,12 @@ export class RecoveryCodesOnlyResponse {
   @ApiProperty({ type: [String], description: "Shown once; the old set no longer works" })
   recoveryCodes!: string[];
 }
+
+export class CloseAccountDto {
+  @ApiProperty() @IsString() @Length(1, 1024) password!: string;
+  @ApiProperty({ required: false, description: "6-digit authenticator code, when it is on" })
+  @IsOptional()
+  @IsString()
+  @Matches(SIX)
+  code?: string;
+}
