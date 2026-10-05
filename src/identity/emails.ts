@@ -260,7 +260,7 @@ export function accountClosedEmail(input: { name: string; supportLink: string })
     heading: "Your account is closed",
     paragraphs: [
       `Hi ${input.name},`,
-      "Your Àjọ account was closed just now, and every device was signed out. Records we must keep by law are kept safely; nothing else about you is used again.",
+      "Your Àjọ account was closed just now, and every device was signed out. Records we must keep by law are kept safely.",
     ],
     button: { label: "Contact us", href: input.supportLink },
     note: "If you didn't close your account, contact us straight away.",
