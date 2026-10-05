@@ -100,3 +100,20 @@ export class InviterResponse {
   @ApiProperty({ description: "First name only" }) name!: string;
   @ApiProperty({ nullable: true }) username!: string | null;
 }
+
+export class InviteCodeDto {
+  @ApiProperty({
+    example: "ADA-SAVES",
+    description: "4-20 letters, numbers, - or _; not case-sensitive",
+  })
+  @Transform(trim)
+  @IsString()
+  @Length(4, 20)
+  code!: string;
+}
+
+export class ReferralResponse {
+  @ApiProperty() displayName!: string;
+  @ApiProperty({ nullable: true }) username!: string | null;
+  @ApiProperty() joinedAt!: string;
+}

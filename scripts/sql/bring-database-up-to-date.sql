@@ -734,6 +734,22 @@ CREATE TRIGGER users_log_kyc_override
   FOR EACH ROW WHEN (OLD.kyc_override IS DISTINCT FROM NEW.kyc_override)
   EXECUTE FUNCTION log_kyc_override();
 
+-- 1790900150000 CustomInviteCodes ------------------------------------------------------------
+-- People choose their own invite code (4-20 letters, numbers, - or _, in capitals); each change is
+-- kept, which limits how often it changes and holds a given-up code for its owner for 90 days.
+ALTER TABLE invite_links DROP CONSTRAINT IF EXISTS invite_links_code_check;
+ALTER TABLE invite_links
+  ADD CONSTRAINT invite_links_code_check CHECK (code ~ '^[A-Z0-9][A-Z0-9_-]{2,18}[A-Z0-9]$');
+CREATE TABLE IF NOT EXISTS invite_code_changes (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+  old_code text NOT NULL,
+  new_code text NOT NULL,
+  changed_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS invite_code_changes_user_idx ON invite_code_changes (user_id, changed_at);
+CREATE INDEX IF NOT EXISTS invite_code_changes_old_code_idx ON invite_code_changes (old_code, changed_at);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -763,14 +779,15 @@ SELECT v.ts, v.name
     (1790900110000::bigint, 'CreateSavings1790900110000'),
     (1790900120000::bigint, 'CreateFriends1790900120000'),
     (1790900130000::bigint, 'CreateGroups1790900130000'),
-    (1790900140000::bigint, 'AddKycOverride1790900140000')
+    (1790900140000::bigint, 'AddKycOverride1790900140000'),
+    (1790900150000::bigint, 'CustomInviteCodes1790900150000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all nineteen migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))

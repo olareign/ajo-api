@@ -1086,6 +1086,75 @@
         "tags": [
           "friends"
         ]
+      },
+      "put": {
+        "operationId": "FriendsController_setInvite",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
+      }
+    },
+    "/api/v1/friends/referrals": {
+      "get": {
+        "operationId": "FriendsController_referrals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`kyc_required`: identity checks are not approved yet"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "friends"
+        ]
       }
     },
     "/api/v1/friends/requests/{username}/accept": {
@@ -3585,6 +3654,39 @@
         "required": [
           "code",
           "link"
+        ]
+      },
+      "InviteCodeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "ADA-SAVES",
+            "description": "4-20 letters, numbers, - or _; not case-sensitive"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "ReferralResponse": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "username": {
+            "type": "object",
+            "nullable": true
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName",
+          "username",
+          "joinedAt"
         ]
       },
       "UsernameDto": {
