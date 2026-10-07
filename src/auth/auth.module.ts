@@ -36,6 +36,6 @@ import { Totp } from "./totp.js";
     SessionService,
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService, AccessTokens, MfaService, MoneyActionGuard],
+  exports: [SessionService, AccessTokens, MfaService, MoneyActionGuard, FieldEncryption, Totp],
 })
 export class AuthModule {}

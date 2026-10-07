@@ -9,6 +9,7 @@ import type { Env } from "./config/env.js";
 import { ENV, EnvModule } from "./config/env.module.js";
 import { buildDataSourceOptions } from "./database/database-options.js";
 import { AdaptersModule } from "./adapters/adapters.module.js";
+import { AdminModule } from "./admin/admin.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { FriendsModule } from "./friends/friends.module.js";
 import { GroupsModule } from "./groups/groups.module.js";
@@ -66,6 +67,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     PaymentsModule,
     SavingsModule,
     WalletModule,
+    AdminModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

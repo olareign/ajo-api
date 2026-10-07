@@ -818,6 +818,75 @@ ALTER TABLE notifications
   ADD COLUMN IF NOT EXISTS push_attempts integer NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS notifications_push_pending_idx ON notifications (created_at) WHERE push_status = 'pending';
 
+-- 1790900200000 AdminBackOffice --------------------------------------------------------------
+-- Staff are a separate set of people from customers, with their own sessions and a mandatory
+-- authenticator code. Everything they do is written to admin_audit, which the database refuses to
+-- change or empty.
+CREATE TABLE IF NOT EXISTS admin_users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email citext NOT NULL UNIQUE CHECK (char_length(email) <= 254),
+  display_name text NOT NULL CHECK (char_length(display_name) BETWEEN 1 AND 80),
+  role text NOT NULL CHECK (role IN ('owner', 'support', 'compliance', 'finance')),
+  status text NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'disabled')),
+  password_hash text,
+  totp_secret text,
+  totp_confirmed_at timestamptz,
+  totp_last_step bigint,
+  setup_token_hash text,
+  setup_expires_at timestamptz,
+  failed_login_count integer NOT NULL DEFAULT 0,
+  locked_until timestamptz,
+  last_login_at timestamptz,
+  created_by uuid REFERENCES admin_users (id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES admin_users (id) ON DELETE CASCADE,
+  token_hash text NOT NULL UNIQUE,
+  ip inet,
+  device text CHECK (char_length(device) <= 100),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  revoked_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS admin_sessions_admin_idx ON admin_sessions (admin_id);
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id bigserial PRIMARY KEY,
+  at timestamptz NOT NULL DEFAULT now(),
+  admin_id uuid REFERENCES admin_users (id) ON DELETE RESTRICT,
+  admin_email text NOT NULL,
+  role text NOT NULL,
+  action text NOT NULL CHECK (char_length(action) <= 60),
+  target_type text CHECK (char_length(target_type) <= 40),
+  target_id text CHECK (char_length(target_id) <= 80),
+  detail jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ip inet,
+  outcome text NOT NULL CHECK (outcome IN ('ok', 'denied', 'failed'))
+);
+CREATE INDEX IF NOT EXISTS admin_audit_at_idx ON admin_audit (id DESC);
+CREATE INDEX IF NOT EXISTS admin_audit_target_idx ON admin_audit (target_type, target_id, id DESC);
+CREATE OR REPLACE FUNCTION admin_audit_reject_change() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'the admin audit log cannot be changed: % is not allowed', TG_OP;
+END $$;
+DROP TRIGGER IF EXISTS admin_audit_immutable ON admin_audit;
+CREATE TRIGGER admin_audit_immutable BEFORE UPDATE OR DELETE ON admin_audit
+  FOR EACH ROW EXECUTE FUNCTION admin_audit_reject_change();
+DROP TRIGGER IF EXISTS admin_audit_no_truncate ON admin_audit;
+CREATE TRIGGER admin_audit_no_truncate BEFORE TRUNCATE ON admin_audit
+  FOR EACH STATEMENT EXECUTE FUNCTION admin_audit_reject_change();
+CREATE TABLE IF NOT EXISTS recovery_case_notes (
+  id bigserial PRIMARY KEY,
+  case_id uuid NOT NULL REFERENCES recovery_cases (id) ON DELETE RESTRICT,
+  admin_id uuid NOT NULL REFERENCES admin_users (id) ON DELETE RESTRICT,
+  note text NOT NULL CHECK (char_length(note) BETWEEN 1 AND 1000),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS recovery_case_notes_case_idx ON recovery_case_notes (case_id, id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status_note text CHECK (char_length(status_note) <= 300);
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -852,14 +921,15 @@ SELECT v.ts, v.name
     (1790900160000::bigint, 'AccountSecurity1790900160000'),
     (1790900170000::bigint, 'ProfileSettings1790900170000'),
     (1790900180000::bigint, 'ProfilePhoto1790900180000'),
-    (1790900190000::bigint, 'WebPush1790900190000')
+    (1790900190000::bigint, 'WebPush1790900190000'),
+    (1790900200000::bigint, 'AdminBackOffice1790900200000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-four migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-five migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))

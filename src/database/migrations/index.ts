@@ -15,6 +15,7 @@ import { AccountSecurity1790900160000 } from "./1790900160000-account-security.j
 import { ProfileSettings1790900170000 } from "./1790900170000-profile-settings.js";
 import { ProfilePhoto1790900180000 } from "./1790900180000-profile-photo.js";
 import { WebPush1790900190000 } from "./1790900190000-web-push.js";
+import { AdminBackOffice1790900200000 } from "./1790900200000-admin-back-office.js";
 import { CreateKycSteps1790900080000 } from "./1790900080000-create-kyc-steps.js";
 import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js";
 import { CreateNotifications1790900100000 } from "./1790900100000-create-notifications.js";
@@ -49,4 +50,5 @@ export const migrations = [
   ProfileSettings1790900170000,
   ProfilePhoto1790900180000,
   WebPush1790900190000,
+  AdminBackOffice1790900200000,
 ];
