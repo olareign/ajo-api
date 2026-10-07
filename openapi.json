@@ -642,6 +642,100 @@
         ]
       }
     },
+    "/api/v1/me/photo": {
+      "put": {
+        "operationId": "PhotoController_set",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoSetResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      },
+      "delete": {
+        "operationId": "PhotoController_remove",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/v1/photos/{username}": {
+      "get": {
+        "operationId": "PhotoController_view",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image (WebP)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "profile"
+        ]
+      }
+    },
     "/api/v1/kyc": {
       "get": {
         "operationId": "KycController_status",
@@ -3467,6 +3561,15 @@
             "type": "boolean",
             "description": "False until SMS checks arrive"
           },
+          "photoVersion": {
+            "type": "object",
+            "nullable": true,
+            "description": "When the profile picture was last set, in milliseconds (null = none)"
+          },
+          "photosEnabled": {
+            "type": "boolean",
+            "description": "False until picture storage is switched on"
+          },
           "trust": {
             "type": "object",
             "description": "Standing in circles: new, building or trusted, and a score out of 100",
@@ -3492,6 +3595,8 @@
           "kycVia",
           "phone",
           "phoneVerified",
+          "photoVersion",
+          "photosEnabled",
           "trust"
         ]
       },
@@ -3567,6 +3672,10 @@
         "required": [
           "pin"
         ]
+      },
+      "PhotoSetResponse": {
+        "type": "object",
+        "properties": {}
       },
       "KycStepResponse": {
         "type": "object",
@@ -4097,6 +4206,11 @@
           },
           "trust": {
             "$ref": "#/components/schemas/TrustResponse"
+          },
+          "photoVersion": {
+            "type": "object",
+            "nullable": true,
+            "description": "Version of their picture, only for people you are connected to (friends, open requests); fetch it at /photos/<username>"
           }
         },
         "required": [
@@ -4105,7 +4219,8 @@
           "relation",
           "mutualFriends",
           "tier",
-          "trust"
+          "trust",
+          "photoVersion"
         ]
       },
       "FriendResponse": {
@@ -4129,6 +4244,10 @@
           },
           "trust": {
             "$ref": "#/components/schemas/TrustResponse"
+          },
+          "photoVersion": {
+            "type": "object",
+            "nullable": true
           }
         },
         "required": [
@@ -4136,7 +4255,8 @@
           "displayName",
           "since",
           "tier",
-          "trust"
+          "trust",
+          "photoVersion"
         ]
       },
       "FriendsResponse": {
@@ -4171,13 +4291,18 @@
               1,
               2
             ]
+          },
+          "photoVersion": {
+            "type": "object",
+            "nullable": true
           }
         },
         "required": [
           "username",
           "displayName",
           "sentAt",
-          "tier"
+          "tier",
+          "photoVersion"
         ]
       },
       "RequestsResponse": {
@@ -4235,6 +4360,11 @@
           "trust": {
             "$ref": "#/components/schemas/TrustResponse"
           },
+          "photoVersion": {
+            "type": "object",
+            "nullable": true,
+            "description": "Version of their picture, only for people you are connected to (friends, open requests); fetch it at /photos/<username>"
+          },
           "reason": {
             "type": "string",
             "enum": [
@@ -4258,6 +4388,7 @@
           "mutualFriends",
           "tier",
           "trust",
+          "photoVersion",
           "reason",
           "mutualNames"
         ]
