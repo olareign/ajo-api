@@ -1,6 +1,6 @@
 import { ValidationPipe } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { json, type NextFunction, type Request, type Response } from "express";
+import { json, raw, type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import type { Env } from "../config/env.js";
 import { AllExceptionsFilter } from "./all-exceptions.filter.js";
@@ -41,6 +41,11 @@ export function configureApp(app: NestExpressApplication, env: Env): void {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
+  // A profile photo is sent as the picture itself; only that one route reads such a body (5 MB at most).
+  app.use(
+    `/${API_PREFIX}/me/photo`,
+    raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "5mb" }),
+  );
   app.use(
     json({
       limit: MAX_BODY_SIZE,

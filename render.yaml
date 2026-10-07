@@ -56,6 +56,17 @@ services:
       # instead, use `pnpm kyc:override <email> approve` or set users.kyc_override in the database.
       - key: KYC_AUTO_APPROVE
         sync: false
+      # Profile photos live in a private Cloudflare R2 bucket. Paste all four in the dashboard, or none
+      # (then photo upload is simply off). R2 > Overview shows the account id; the key pair comes from
+      # R2 > Manage API tokens > Create token, "Object Read & Write", limited to this one bucket.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
       # Shared with the web app's server (the same value in its BFF_SHARED_SECRET): lets the API see each
       # person's own address and device, so rate limits and sign-in alerts are per person.
       - key: BFF_SHARED_SECRET

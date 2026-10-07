@@ -8,6 +8,9 @@ import { TurnstileBotCheck } from "./bot-check/turnstile.adapter.js";
 import { FakeBreachedPasswords } from "./breached-passwords/fake.adapter.js";
 import { HibpBreachedPasswords } from "./breached-passwords/hibp.adapter.js";
 import { FakeMailer } from "./mail/fake.adapter.js";
+import { FakeObjectStore } from "./object-store/fake.adapter.js";
+import { OBJECT_STORE } from "./object-store/object-store.port.js";
+import { R2ObjectStore } from "./object-store/r2.adapter.js";
 import { MAILER } from "./mail/mailer.port.js";
 import { ResendMailer } from "./mail/resend.adapter.js";
 import { SmtpMailer } from "./mail/smtp.adapter.js";
@@ -55,7 +58,22 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
           ? new TurnstileBotCheck(env.TURNSTILE_SECRET_KEY!)
           : new FakeBotCheck(),
     },
+    {
+      provide: OBJECT_STORE,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET
+          ? new R2ObjectStore({
+              accountId: env.R2_ACCOUNT_ID,
+              accessKeyId: env.R2_ACCESS_KEY_ID,
+              secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+              bucket: env.R2_BUCKET,
+            })
+          : env.NODE_ENV === "production"
+            ? null
+            : new FakeObjectStore(),
+    },
   ],
-  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK],
+  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK, OBJECT_STORE],
 })
 export class AdaptersModule {}
