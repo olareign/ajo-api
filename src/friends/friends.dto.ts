@@ -49,6 +49,13 @@ export class PersonResponse {
   @ApiProperty({ enum: [1, 2], description: "1 passport stamped; 2 with a national check too" })
   tier!: number;
   @ApiProperty({ type: TrustResponse }) trust!: TrustResponse;
+  @ApiProperty({
+    nullable: true,
+    description:
+      "Version of their picture, only for people you are connected to (friends, open requests); " +
+      "fetch it at /photos/<username>",
+  })
+  photoVersion!: number | null;
 }
 
 export class SuggestionResponse extends PersonResponse {
@@ -63,6 +70,7 @@ export class FriendResponse {
   @ApiProperty() since!: string;
   @ApiProperty({ enum: [1, 2] }) tier!: number;
   @ApiProperty({ type: TrustResponse }) trust!: TrustResponse;
+  @ApiProperty({ nullable: true }) photoVersion!: number | null;
 }
 
 export class FriendsResponse {
@@ -74,6 +82,7 @@ export class RequestResponse {
   @ApiProperty() displayName!: string;
   @ApiProperty() sentAt!: string;
   @ApiProperty({ enum: [1, 2] }) tier!: number;
+  @ApiProperty({ nullable: true }) photoVersion!: number | null;
 }
 
 export class RequestsResponse {

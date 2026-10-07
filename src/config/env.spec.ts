@@ -299,3 +299,31 @@ describe("KYC_AUTO_APPROVE", () => {
     expect(() => loadEnv({ ...valid, KYC_AUTO_APPROVE: "yes" })).toThrow(/KYC_AUTO_APPROVE/);
   });
 });
+
+describe("R2 settings", () => {
+  const base = { DATABASE_URL: "postgres://a:b@localhost/ajo", REDIS_URL: "redis://localhost" };
+  const all = {
+    R2_ACCOUNT_ID: "a".repeat(32),
+    R2_ACCESS_KEY_ID: "AKIAEXAMPLEKEY123",
+    R2_SECRET_ACCESS_KEY: "super-secret-value-do-not-log",
+    R2_BUCKET: "ajo-media",
+  };
+
+  it("takes all four or none", () => {
+    expect(loadEnv({ ...base, ...all }).R2_BUCKET).toBe("ajo-media");
+    expect(loadEnv(base).R2_BUCKET).toBeUndefined();
+    const { R2_BUCKET: _drop, ...three } = all;
+    expect(() => loadEnv({ ...base, ...three })).toThrow(/R2_BUCKET: required when any R2 setting/);
+  });
+
+  it("checks the shape of the account id and bucket, and names the setting without its value", () => {
+    expect(() => loadEnv({ ...base, ...all, R2_ACCOUNT_ID: "not-an-id" })).toThrow(/R2_ACCOUNT_ID/);
+    expect(() => loadEnv({ ...base, ...all, R2_BUCKET: "Bad Bucket!" })).toThrow(/R2_BUCKET/);
+    try {
+      loadEnv({ ...base, ...all, R2_SECRET_ACCESS_KEY: "short" });
+    } catch (e) {
+      expect(String(e)).toContain("R2_SECRET_ACCESS_KEY");
+      expect(String(e)).not.toContain('short"');
+    }
+  });
+});

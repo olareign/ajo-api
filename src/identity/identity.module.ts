@@ -3,6 +3,8 @@ import { KycModule } from "../kyc/kyc.module.js";
 import { DevicesService } from "./devices.service.js";
 import { EmailVerification } from "./email-verification.service.js";
 import { MeController } from "./me.controller.js";
+import { PhotoController } from "./photo.controller.js";
+import { PhotoService } from "./photo.service.js";
 import { PinService } from "./pin.service.js";
 import { PasswordHasher } from "./password-hasher.js";
 import { PasswordResetController } from "./password-reset.controller.js";
@@ -14,13 +16,14 @@ import { UsernameService } from "./username.service.js";
 
 @Module({
   imports: [KycModule],
-  controllers: [SignUpController, PasswordResetController, MeController],
+  controllers: [SignUpController, PasswordResetController, MeController, PhotoController],
   providers: [
     PasswordHasher,
     EmailVerification,
     SignUpService,
     PasswordResetService,
     PinService,
+    PhotoService,
     UsernameService,
     DevicesService,
     TrustedDevicesService,

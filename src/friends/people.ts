@@ -104,3 +104,9 @@ export async function lockPeople(tx: Tx, a: string, b: string): Promise<void> {
     [a, b].sort(),
   ]);
 }
+
+/** When a person's picture was last set, in milliseconds, as text (null = none): a version for caching it. */
+export const PHOTO_V = `(extract(epoch FROM u.photo_updated_at) * 1000)::bigint::text AS photo_v`;
+/** Same, as a number. */
+export const photoVersion = (v: string | null | undefined): number | null =>
+  v === null || v === undefined ? null : Number(v);

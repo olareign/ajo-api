@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { isValidUsername, normalizeUsername } from "../identity/username-policy.js";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
-import { approvedSql, blockedSql } from "./people.js";
+import { approvedSql, blockedSql, PHOTO_V } from "./people.js";
 import type { Relation } from "./friends.service.js";
 
 export type Found = {
@@ -13,6 +13,7 @@ export type Found = {
   relation: Relation;
   mutual: number;
   national: boolean;
+  photo_v?: string | null;
 };
 
 export type Suggestion = Found & {
@@ -75,7 +76,7 @@ export class Discovery {
   async profile(me: string, raw: string): Promise<Found | null> {
     const username = normalizeUsername(raw);
     const [row] = await this.db.query<Found[]>(
-      `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national
+      `SELECT u.id, u.username::text AS username, u.display_name, ${RELATION} AS relation, ${MUTUAL} AS mutual, ${NATIONAL} AS national, ${PHOTO_V}
          FROM users u ${JOIN_FRIENDSHIP}
         WHERE u.id <> $1 AND u.username = $2 AND u.status = 'active'
           AND ${approvedSql("u", this.env.KYC_AUTO_APPROVE)} AND NOT ${blockedSql("u.id", "$1::uuid")}`,

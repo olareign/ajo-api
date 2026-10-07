@@ -15,6 +15,7 @@ import { ApiBearerAuth, ApiNoContentResponse, ApiOkResponse, ApiTags } from "@ne
 import { Throttle } from "@nestjs/throttler";
 import type { AccessClaims } from "../auth/access-tokens.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
+import { photoVersion } from "./people.js";
 import { RequiresKyc } from "../kyc/requires-kyc.decorator.js";
 import { Discovery } from "./discovery.service.js";
 import {
@@ -70,6 +71,8 @@ export class FriendsController {
       relation: f.relation,
       mutualFriends: f.mutual,
       tier: tier(f.national),
+      // Pictures are shown only to people already connected, never in search.
+      photoVersion: null,
     }));
   }
 
@@ -93,6 +96,7 @@ export class FriendsController {
       relation: f.relation,
       mutualFriends: f.mutual,
       tier: tier(f.national),
+      photoVersion: f.relation === "none" ? null : photoVersion(f.photo_v),
     };
   }
 
@@ -108,6 +112,7 @@ export class FriendsController {
         displayName: r.display_name,
         since: r.since.toISOString(),
         tier: tier(r.national),
+        photoVersion: photoVersion(r.photo_v),
       })),
     };
   }
@@ -121,6 +126,7 @@ export class FriendsController {
       displayName: r.display_name,
       sentAt: r.created_at.toISOString(),
       tier: tier(r.national),
+      photoVersion: photoVersion(r.photo_v),
     });
     return { incoming: incoming.map(shape), outgoing: outgoing.map(shape) };
   }
@@ -138,6 +144,7 @@ export class FriendsController {
       relation: r.relation,
       mutualFriends: r.mutual,
       tier: tier(r.national),
+      photoVersion: null,
       reason: r.reason,
       mutualNames: r.names,
     }));

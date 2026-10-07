@@ -9,6 +9,7 @@ import {
   assertNotBlocked,
   lockPair,
   lockPeople,
+  PHOTO_V,
   reachable,
   type Person,
   type Tx,
@@ -31,6 +32,7 @@ export type FriendRow = {
   display_name: string;
   since: Date;
   national: boolean;
+  photo_v: string | null;
 };
 
 export type RequestRow = {
@@ -38,6 +40,7 @@ export type RequestRow = {
   display_name: string;
   created_at: Date;
   national: boolean;
+  photo_v: string | null;
 };
 
 const NATIONAL = `EXISTS (SELECT 1 FROM kyc_steps ns WHERE ns.user_id = u.id AND ns.step = 'national_check' AND ns.status = 'approved')`;
@@ -236,7 +239,7 @@ export class Friends {
 
   async list(me: string): Promise<FriendRow[]> {
     return this.db.query<FriendRow[]>(
-      `SELECT u.id, u.username::text AS username, u.display_name, f.responded_at AS since, ${NATIONAL} AS national
+      `SELECT u.id, u.username::text AS username, u.display_name, f.responded_at AS since, ${NATIONAL} AS national, ${PHOTO_V}
          FROM friendships f
          JOIN users u ON u.id = CASE WHEN f.low_id = $1 THEN f.high_id ELSE f.low_id END
         WHERE f.status = 'accepted' AND $1 IN (f.low_id, f.high_id)
@@ -248,7 +251,7 @@ export class Friends {
 
   async requests(me: string): Promise<{ incoming: RequestRow[]; outgoing: RequestRow[] }> {
     const rows = await this.db.query<(RequestRow & { incoming: boolean })[]>(
-      `SELECT u.username::text AS username, u.display_name, f.created_at, ${NATIONAL} AS national,
+      `SELECT u.username::text AS username, u.display_name, f.created_at, ${NATIONAL} AS national, ${PHOTO_V},
               (f.requester_id <> $1) AS incoming
          FROM friendships f
          JOIN users u ON u.id = CASE WHEN f.low_id = $1 THEN f.high_id ELSE f.low_id END

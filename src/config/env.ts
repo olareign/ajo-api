@@ -105,6 +105,21 @@ const schema = z
     GROUP_DEPOSIT_BASE_X: z.coerce.number().int().min(0).max(10).default(1),
     GROUP_DEPOSIT_EARLY_X: z.coerce.number().int().min(0).max(30).default(3),
     GROUP_REQUIRES_MANDATE: flag.default(true),
+    /**
+     * Cloudflare R2, the private place profile photos are kept (identity documents later). All four
+     * together or none. With none, development and tests keep files in memory and production simply
+     * has no photo upload (the screens say so); nothing else is affected.
+     */
+    R2_ACCOUNT_ID: z
+      .string()
+      .regex(/^[a-f0-9]{32}$/, "must be the 32-character Cloudflare account id")
+      .optional(),
+    R2_ACCESS_KEY_ID: z.string().min(8).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(16).optional(),
+    R2_BUCKET: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, "must be a bucket name (lowercase, digits, -)")
+      .optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -153,6 +168,17 @@ const schema = z
     }
     if (env.NODE_ENV === "production" && env.PAYMENTS_FAKE) {
       require("PAYMENTS_FAKE", "stand-in not allowed in production");
+    }
+    const r2 = [env.R2_ACCOUNT_ID, env.R2_ACCESS_KEY_ID, env.R2_SECRET_ACCESS_KEY, env.R2_BUCKET];
+    if (r2.some(Boolean) && !r2.every(Boolean)) {
+      for (const key of [
+        "R2_ACCOUNT_ID",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+        "R2_BUCKET",
+      ] as const) {
+        if (!env[key]) require(key, "required when any R2 setting is given");
+      }
     }
     if (env.BOT_CHECK === "turnstile" && !env.TURNSTILE_SECRET_KEY) {
       require("TURNSTILE_SECRET_KEY", "required when BOT_CHECK=turnstile");

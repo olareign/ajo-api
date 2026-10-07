@@ -40,6 +40,7 @@ import { KycService } from "../kyc/kyc.service.js";
 import { sql } from "../database/sql.js";
 import { normalizePhone } from "./phone.js";
 import { recordSecurityEvent } from "./security-events.js";
+import { PhotoService } from "./photo.service.js";
 import { PinService } from "./pin.service.js";
 import { UsernameService } from "./username.service.js";
 
@@ -67,6 +68,13 @@ export class ProfileResponse {
   phone!: string | null;
   @ApiProperty({ description: "False until SMS checks arrive" }) phoneVerified!: boolean;
   @ApiProperty({
+    nullable: true,
+    description: "When the profile picture was last set, in milliseconds (null = none)",
+  })
+  photoVersion!: number | null;
+  @ApiProperty({ description: "False until picture storage is switched on" })
+  photosEnabled!: boolean;
+  @ApiProperty({
     description: "Standing in circles: new, building or trusted, and a score out of 100",
     example: { level: "building", score: 25 },
   })
@@ -93,6 +101,7 @@ export class MeController {
     private readonly usernames: UsernameService,
     private readonly kyc: KycService,
     private readonly trust: TrustService,
+    private readonly photos: PhotoService,
   ) {}
 
   /** Only the caller's own record; the id comes from the session, never from the request. */
@@ -102,6 +111,7 @@ export class MeController {
     const [user] = await this.db.query(
       `SELECT id, email, display_name, username, country, goal, email_verified AS verified,
               phone, phone_verified_at IS NOT NULL AS phone_verified,
+              (extract(epoch FROM photo_updated_at) * 1000)::bigint::text AS photo_v,
               EXISTS (SELECT 1 FROM transaction_pins p WHERE p.user_id = users.id) AS has_pin,
               EXISTS (SELECT 1 FROM user_mfa m WHERE m.user_id = users.id AND m.confirmed_at IS NOT NULL) AS mfa_enabled
          FROM users WHERE id = $1`,
@@ -128,6 +138,8 @@ export class MeController {
       kycVia: via,
       phone: user.phone,
       phoneVerified: user.phone_verified,
+      photoVersion: user.photo_v === null ? null : Number(user.photo_v),
+      photosEnabled: this.photos.enabled,
       trust: publicTrust(trust),
     };
   }
