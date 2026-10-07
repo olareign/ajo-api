@@ -120,6 +120,26 @@ const schema = z
       .string()
       .regex(/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/, "must be a bucket name (lowercase, digits, -)")
       .optional(),
+    /**
+     * Web push (messages to a phone's lock screen). A VAPID key pair, made once with
+     * `pnpm vapid:generate`, and a contact for the push services. All three together or none; with
+     * none, development and tests use a stand-in and production has no push (the app says so).
+     */
+    VAPID_PUBLIC_KEY: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{87}$/, "must be the 87-character public key")
+      .optional(),
+    VAPID_PRIVATE_KEY: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{43}$/, "must be the 43-character private key")
+      .optional(),
+    VAPID_SUBJECT: z
+      .string()
+      .regex(
+        /^(mailto:[^\s@]+@[^\s@]+|https:\/\/\S+)$/,
+        "must be mailto:you@example.com or an https URL",
+      )
+      .optional(),
     /** HMAC key for access tokens; at least 32 characters, required in production. */
     JWT_SECRET: z.string().min(32).optional(),
     /** AES-256 key (32 random bytes, base64) for sensitive columns such as authenticator secrets. */
@@ -178,6 +198,12 @@ const schema = z
         "R2_BUCKET",
       ] as const) {
         if (!env[key]) require(key, "required when any R2 setting is given");
+      }
+    }
+    const vapid = [env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY, env.VAPID_SUBJECT];
+    if (vapid.some(Boolean) && !vapid.every(Boolean)) {
+      for (const key of ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"] as const) {
+        if (!env[key]) require(key, "required when any VAPID setting is given");
       }
     }
     if (env.BOT_CHECK === "turnstile" && !env.TURNSTILE_SECRET_KEY) {

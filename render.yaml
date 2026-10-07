@@ -67,6 +67,14 @@ services:
         sync: false
       - key: R2_SECRET_ACCESS_KEY
         sync: false
+      # Push notifications to a phone's lock screen. Run `pnpm vapid:generate` once on your machine and
+      # paste the three values here, or none (then push is simply off). Keep the private key to yourself.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
       # Shared with the web app's server (the same value in its BFF_SHARED_SECRET): lets the API see each
       # person's own address and device, so rate limits and sign-in alerts are per person.
       - key: BFF_SHARED_SECRET

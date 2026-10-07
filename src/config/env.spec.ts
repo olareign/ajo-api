@@ -327,3 +327,34 @@ describe("R2 settings", () => {
     }
   });
 });
+
+describe("VAPID settings", () => {
+  const base = { DATABASE_URL: "postgres://a:b@localhost/ajo", REDIS_URL: "redis://localhost" };
+  const all = {
+    VAPID_PUBLIC_KEY: "B".repeat(87),
+    VAPID_PRIVATE_KEY: "k".repeat(43),
+    VAPID_SUBJECT: "mailto:owner@example.com",
+  };
+
+  it("takes all three or none", () => {
+    expect(loadEnv({ ...base, ...all }).VAPID_SUBJECT).toBe("mailto:owner@example.com");
+    expect(loadEnv(base).VAPID_PUBLIC_KEY).toBeUndefined();
+    const { VAPID_SUBJECT: _drop, ...two } = all;
+    expect(() => loadEnv({ ...base, ...two })).toThrow(/VAPID_SUBJECT: required when any VAPID/);
+  });
+
+  it("checks the shape of each, and never repeats the private key", () => {
+    expect(() => loadEnv({ ...base, ...all, VAPID_PUBLIC_KEY: "short" })).toThrow(
+      /VAPID_PUBLIC_KEY/,
+    );
+    expect(() => loadEnv({ ...base, ...all, VAPID_SUBJECT: "owner@example.com" })).toThrow(
+      /VAPID_SUBJECT/,
+    );
+    try {
+      loadEnv({ ...base, ...all, VAPID_PRIVATE_KEY: "nope-" + "k".repeat(10) });
+    } catch (e) {
+      expect(String(e)).toContain("VAPID_PRIVATE_KEY");
+      expect(String(e)).not.toContain("nope-");
+    }
+  });
+});
