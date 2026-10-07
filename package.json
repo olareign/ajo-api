@@ -27,6 +27,7 @@
     "mail:check": "node dist/mail-check.js",
     "retention:run": "node dist/retention.js",
     "kyc:override": "node dist/kyc-override.js",
+    "vapid:generate": "node dist/vapid.js",
     "openapi:check": "env NODE_ENV=test DATABASE_URL=postgres://unused@localhost/unused REDIS_URL=redis://localhost node dist/openapi.js openapi.check.json && diff -u openapi.json openapi.check.json && rm openapi.check.json",
     "migration:create": "typeorm migration:create"
   },
@@ -60,6 +61,7 @@
     "rxjs": "^7.8.2",
     "sharp": "^0.35.5",
     "typeorm": "^1.1.1",
+    "web-push": "^3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -74,6 +76,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/smtp-server": "^3.5.13",
     "@types/supertest": "^7.2.1",
+    "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.11",
     "mailparser": "^3.9.33",
     "oxlint": "^1.86.0",

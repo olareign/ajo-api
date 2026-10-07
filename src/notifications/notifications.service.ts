@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { MAILER, type Mailer } from "../adapters/mail/mailer.port.js";
+import { PUSH_SENDER, type PushSender } from "../adapters/push/push-sender.port.js";
 import type { Env } from "../config/env.js";
 import { ENV } from "../config/env.module.js";
 import { sql } from "../database/sql.js";
@@ -35,6 +36,19 @@ export type NotificationRow = {
 
 /** An email that keeps failing is left after this many tries. */
 export const MAX_EMAIL_ATTEMPTS = 5;
+/** A push is worth less the longer it waits, so it is tried a few times and then left. */
+export const MAX_PUSH_ATTEMPTS = 3;
+/** A push older than this is stale news and is not sent. */
+const PUSH_FRESH_FOR = "1 day";
+
+/**
+ * True when the person turned this kind of optional message off ($8 is its category, $1 the person).
+ * Money and account messages have no category, so they are never off.
+ */
+const CATEGORY_OFF = `($8::text IS NOT NULL AND EXISTS (
+  SELECT 1 FROM notification_settings s WHERE s.user_id = $1 AND NOT CASE $8::text
+    WHEN 'reminders' THEN s.reminders WHEN 'savings' THEN s.savings
+    WHEN 'circles' THEN s.circles WHEN 'friends' THEN s.friends ELSE true END))`;
 
 /**
  * One place that tells people things. A message is first saved for the app (and, if asked, queued for
@@ -49,23 +63,27 @@ export class Notifications implements OnModuleInit {
     private readonly db: DataSource,
     private readonly scheduler: Scheduler,
     @Inject(MAILER) private readonly mailer: Mailer,
+    @Inject(PUSH_SENDER) private readonly push: PushSender | null,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
   onModuleInit(): void {
-    this.scheduler.register({ name: "notifications", run: () => this.sendQueuedEmails() });
+    this.scheduler.register({
+      name: "notifications",
+      run: async () => (await this.sendQueuedEmails()) + (await this.sendQueuedPush()),
+    });
   }
 
   /** Returns whether it was new (false: this person already had this message). */
   async notify(userId: string, message: NewNotification, within?: Tx): Promise<boolean> {
-    // An optional email the person turned off is kept in the app only; money and account emails always go.
-    const text = `INSERT INTO notifications (user_id, kind, title, body, link, dedupe_key, email_status)
+    // An optional email or push the person turned off is kept in the app only; money and account
+    // messages always go. A push is only queued for someone with a browser subscribed to it.
+    const text = `INSERT INTO notifications (user_id, kind, title, body, link, dedupe_key, email_status, push_status)
        VALUES ($1, $2, $3, $4, $5, $6,
-         CASE WHEN $7::text = 'pending' AND $8::text IS NOT NULL AND EXISTS (
-           SELECT 1 FROM notification_settings s WHERE s.user_id = $1 AND NOT CASE $8::text
-             WHEN 'reminders' THEN s.reminders WHEN 'savings' THEN s.savings
-             WHEN 'circles' THEN s.circles WHEN 'friends' THEN s.friends ELSE true END)
-         THEN 'none' ELSE $7::text END)
+         CASE WHEN $7::text = 'pending' AND ${CATEGORY_OFF} THEN 'none' ELSE $7::text END,
+         CASE WHEN $9::boolean AND NOT ${CATEGORY_OFF}
+                   AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = $1)
+              THEN 'pending' ELSE 'none' END)
        ON CONFLICT (user_id, dedupe_key) DO NOTHING RETURNING id`;
     const params = [
       userId,
@@ -76,6 +94,7 @@ export class Notifications implements OnModuleInit {
       message.dedupeKey,
       message.email ? "pending" : "none",
       emailCategory(message.kind),
+      this.push !== null,
     ];
     const rows = within
       ? await sql<{ id: string }>(within, text, params)
@@ -199,6 +218,90 @@ export class Notifications implements OnModuleInit {
           );
           return "failed" as const;
         }
+      });
+      if (done === "none") break;
+      if (done === "sent") sent += 1;
+    }
+    return sent;
+  }
+
+  /**
+   * Sends the pushes waiting in the queue, the same way as email: one at a time under a row lock, a
+   * failure left for the next pass, and a browser that says it is gone is forgotten. The lock screen
+   * gets the title only (no amounts or names in the body), so nothing private shows over a shoulder.
+   */
+  async sendQueuedPush(limit = 25): Promise<number> {
+    const push = this.push;
+    if (!push) return 0;
+    let sent = 0;
+    const tried: string[] = [];
+    for (let i = 0; i < limit; i += 1) {
+      const done = await this.db.transaction(async (tx) => {
+        const [row] = await sql<{
+          id: string;
+          kind: string;
+          title: string;
+          link: string | null;
+          user_id: string;
+          attempts: number;
+          stale: boolean;
+        }>(
+          tx,
+          `SELECT n.id, n.kind, n.title, n.link, n.user_id, n.push_attempts AS attempts,
+                  n.created_at < now() - interval '${PUSH_FRESH_FOR}' AS stale
+             FROM notifications n
+            WHERE n.push_status = 'pending' AND n.id <> ALL($1::uuid[])
+            ORDER BY n.created_at LIMIT 1 FOR UPDATE OF n SKIP LOCKED`,
+          [tried],
+        );
+        if (!row) return "none" as const;
+        tried.push(row.id);
+        const targets = await sql<{ id: string; endpoint: string; p256dh: string; auth: string }>(
+          tx,
+          `SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1`,
+          [row.user_id],
+        );
+        if (row.stale || targets.length === 0) {
+          await sql(tx, `UPDATE notifications SET push_status = 'none' WHERE id = $1`, [row.id]);
+          return "skipped" as const;
+        }
+        const message = {
+          title: row.title,
+          body: "Tap to open Àjọ.",
+          link:
+            row.link?.startsWith("/") && !row.link.startsWith("//") ? row.link : "/notifications",
+          tag: row.kind,
+        };
+        let delivered = 0;
+        let transient = 0;
+        for (const target of targets) {
+          const outcome = await push.send(target, message);
+          if (outcome === "sent") {
+            delivered += 1;
+            await sql(tx, `UPDATE push_subscriptions SET last_sent_at = now() WHERE id = $1`, [
+              target.id,
+            ]);
+          } else if (outcome === "gone") {
+            await sql(tx, `DELETE FROM push_subscriptions WHERE id = $1`, [target.id]);
+          } else {
+            transient += 1;
+          }
+        }
+        if (delivered > 0 || transient === 0) {
+          await sql(tx, `UPDATE notifications SET push_status = $2 WHERE id = $1`, [
+            row.id,
+            delivered > 0 ? "sent" : "none",
+          ]);
+          return delivered > 0 ? ("sent" as const) : ("skipped" as const);
+        }
+        const attempts = row.attempts + 1;
+        await sql(
+          tx,
+          `UPDATE notifications SET push_attempts = $2::int,
+                  push_status = CASE WHEN $2::int >= $3::int THEN 'failed' ELSE 'pending' END WHERE id = $1`,
+          [row.id, attempts, MAX_PUSH_ATTEMPTS],
+        );
+        return "failed" as const;
       });
       if (done === "none") break;
       if (done === "sent") sent += 1;

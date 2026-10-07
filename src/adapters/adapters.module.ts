@@ -14,6 +14,9 @@ import { R2ObjectStore } from "./object-store/r2.adapter.js";
 import { MAILER } from "./mail/mailer.port.js";
 import { ResendMailer } from "./mail/resend.adapter.js";
 import { SmtpMailer } from "./mail/smtp.adapter.js";
+import { FakePushSender } from "./push/fake.adapter.js";
+import { PUSH_SENDER } from "./push/push-sender.port.js";
+import { WebPushSender } from "./push/web-push.adapter.js";
 
 /**
  * Partner adapters, chosen by configuration. Stand-ins are for development and tests;
@@ -73,7 +76,21 @@ import { SmtpMailer } from "./mail/smtp.adapter.js";
             ? null
             : new FakeObjectStore(),
     },
+    {
+      provide: PUSH_SENDER,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT
+          ? new WebPushSender({
+              publicKey: env.VAPID_PUBLIC_KEY,
+              privateKey: env.VAPID_PRIVATE_KEY,
+              subject: env.VAPID_SUBJECT,
+            })
+          : env.NODE_ENV === "production"
+            ? null
+            : new FakePushSender(),
+    },
   ],
-  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK, OBJECT_STORE],
+  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK, OBJECT_STORE, PUSH_SENDER],
 })
 export class AdaptersModule {}

@@ -798,6 +798,26 @@ ALTER TABLE security_events ADD CONSTRAINT security_events_kind_check CHECK (kin
 -- When a profile picture was last set (null = none). The picture itself is a file in private storage.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS photo_updated_at timestamptz;
 
+-- 1790900190000 WebPush ----------------------------------------------------------------------
+-- Pushes to a phone or browser that asked for them: the browser's own address for us to write to,
+-- and a queue on each message, like email's.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  endpoint text NOT NULL UNIQUE CHECK (char_length(endpoint) <= 2048 AND endpoint LIKE 'https://%'),
+  p256dh text NOT NULL CHECK (char_length(p256dh) BETWEEN 1 AND 200),
+  auth text NOT NULL CHECK (char_length(auth) BETWEEN 1 AND 100),
+  device text CHECK (char_length(device) <= 100),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  last_sent_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);
+ALTER TABLE notifications
+  ADD COLUMN IF NOT EXISTS push_status text NOT NULL DEFAULT 'none'
+    CHECK (push_status IN ('none', 'pending', 'sent', 'failed')),
+  ADD COLUMN IF NOT EXISTS push_attempts integer NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS notifications_push_pending_idx ON notifications (created_at) WHERE push_status = 'pending';
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -831,14 +851,15 @@ SELECT v.ts, v.name
     (1790900150000::bigint, 'CustomInviteCodes1790900150000'),
     (1790900160000::bigint, 'AccountSecurity1790900160000'),
     (1790900170000::bigint, 'ProfileSettings1790900170000'),
-    (1790900180000::bigint, 'ProfilePhoto1790900180000')
+    (1790900180000::bigint, 'ProfilePhoto1790900180000'),
+    (1790900190000::bigint, 'WebPush1790900190000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-three migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-four migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))

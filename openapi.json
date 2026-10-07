@@ -2942,6 +2942,107 @@
         ]
       }
     },
+    "/api/v1/push": {
+      "get": {
+        "operationId": "PushController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push/subscriptions": {
+      "post": {
+        "operationId": "PushController_subscribe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "delete": {
+        "operationId": "PushController_unsubscribe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsubscribeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push/test": {
+      "post": {
+        "operationId": "PushController_test",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/savings/preview": {
       "post": {
         "operationId": "SavingsController_preview",
@@ -5535,6 +5636,71 @@
           "items",
           "next",
           "unread"
+        ]
+      },
+      "PushStatusResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "False until push is switched on"
+          },
+          "publicKey": {
+            "type": "object",
+            "nullable": true,
+            "description": "Needed by the browser to subscribe"
+          },
+          "devices": {
+            "type": "number",
+            "description": "How many of this person's browsers are subscribed"
+          }
+        },
+        "required": [
+          "enabled",
+          "publicKey",
+          "devices"
+        ]
+      },
+      "PushKeysDto": {
+        "type": "object",
+        "properties": {
+          "p256dh": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ]
+      },
+      "SubscribeDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "example": "https://fcm.googleapis.com/fcm/send/…"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeysDto"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "UnsubscribeDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint"
         ]
       },
       "PlanDto": {
