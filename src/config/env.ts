@@ -74,6 +74,31 @@ const schema = z
       )
       .optional(),
     PAYSTACK_BASE_URL: urlWithScheme(["https", "http"]).default("https://api.paystack.co"),
+    /**
+     * Stripe serves the UK (GBP): card top-ups and Bacs Direct Debit. Both together or neither. The
+     * webhook signing secret is the one Stripe shows for this API's endpoint
+     * (<API>/api/v1/webhooks/stripe). Use test keys until the business is verified.
+     */
+    STRIPE_SECRET_KEY: z
+      .string()
+      .regex(
+        /^(sk|rk)_(test|live)_[A-Za-z0-9]+$/,
+        "must be a Stripe secret or restricted key (sk_test_…, rk_test_…, or live)",
+      )
+      .optional(),
+    STRIPE_WEBHOOK_SECRET: z
+      .string()
+      .regex(/^whsec_[A-Za-z0-9]+$/, "must be a Stripe webhook signing secret (whsec_…)")
+      .optional(),
+    /**
+     * Open Exchange Rates App ID, for showing a balance's value in other currencies. Rates are only
+     * shown, never used to move money. Unset: development shows sample rates marked as samples, and
+     * production shows none.
+     */
+    OPEN_EXCHANGE_RATES_APP_ID: z
+      .string()
+      .regex(/^[a-f0-9]{32}$/, "must be the 32-character App ID")
+      .optional(),
     /** A stand-in partner for development and tests (it can pretend to move money). Never in production. */
     PAYMENTS_FAKE: flag.default(false),
     /**
@@ -182,6 +207,14 @@ const schema = z
         require("BREACHED_PASSWORD_CHECK", "stand-in not allowed in production");
       }
       if (env.BOT_CHECK === "fake") require("BOT_CHECK", "stand-in not allowed in production");
+    }
+    if (Boolean(env.STRIPE_SECRET_KEY) !== Boolean(env.STRIPE_WEBHOOK_SECRET)) {
+      for (const key of ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as const) {
+        if (!env[key]) require(key, "required when the other Stripe setting is given");
+      }
+    }
+    if (env.KYC_AUTO_APPROVE && /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY ?? "")) {
+      require("KYC_AUTO_APPROVE", "must be off while a live payment key is set");
     }
     if (env.KYC_AUTO_APPROVE && env.PAYSTACK_SECRET_KEY?.startsWith("sk_live_")) {
       require("KYC_AUTO_APPROVE", "must be off while a live payment key is set");

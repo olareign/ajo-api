@@ -50,6 +50,15 @@ services:
       # Webhook URL to register with Paystack: <this API>/api/v1/webhooks/paystack.
       - key: PAYSTACK_SECRET_KEY
         sync: false
+      # Stripe, for the UK (card top-ups and Bacs Direct Debit). Paste both, or neither. The webhook
+      # secret is the one Stripe shows for the endpoint <this API>/api/v1/webhooks/stripe.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Exchange rates for showing a balance in other currencies (shown only, never used to move money).
+      - key: OPEN_EXCHANGE_RATES_APP_ID
+        sync: false
       # While the identity checks are pended: "true" approves everyone without them (tier 1), "false"
       # or empty turns that off again. Set it in the dashboard (a change restarts the API). The API
       # refuses to start with it on beside a live (sk_live_) payment key. To approve one person

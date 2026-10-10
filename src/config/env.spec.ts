@@ -358,3 +358,59 @@ describe("VAPID settings", () => {
     }
   });
 });
+
+describe("Stripe and exchange-rate settings", () => {
+  const base = { DATABASE_URL: "postgres://a:b@localhost/ajo", REDIS_URL: "redis://localhost" };
+
+  it("takes the Stripe key and webhook secret together, and checks their shape", () => {
+    const both = { STRIPE_SECRET_KEY: "sk_test_abc123", STRIPE_WEBHOOK_SECRET: "whsec_abc123" };
+    expect(loadEnv({ ...base, ...both }).STRIPE_SECRET_KEY).toBe("sk_test_abc123");
+    expect(() => loadEnv({ ...base, STRIPE_SECRET_KEY: "sk_test_abc123" })).toThrow(
+      /STRIPE_WEBHOOK_SECRET/,
+    );
+    expect(() => loadEnv({ ...base, STRIPE_WEBHOOK_SECRET: "whsec_abc123" })).toThrow(
+      /STRIPE_SECRET_KEY/,
+    );
+    expect(() => loadEnv({ ...base, ...both, STRIPE_SECRET_KEY: "pk_test_abc" })).toThrow(
+      /STRIPE_SECRET_KEY/,
+    );
+    expect(() => loadEnv({ ...base, ...both, STRIPE_WEBHOOK_SECRET: "nope" })).toThrow(
+      /STRIPE_WEBHOOK_SECRET/,
+    );
+    expect(
+      loadEnv({ ...base, ...both, STRIPE_SECRET_KEY: "rk_live_restricted1" }).STRIPE_SECRET_KEY,
+    ).toBe("rk_live_restricted1");
+  });
+
+  it("refuses approving everyone without checks beside a live Stripe key", () => {
+    expect(() =>
+      loadEnv({
+        ...base,
+        KYC_AUTO_APPROVE: "true",
+        STRIPE_SECRET_KEY: "sk_live_x1",
+        STRIPE_WEBHOOK_SECRET: "whsec_x1",
+      }),
+    ).toThrow(/KYC_AUTO_APPROVE/);
+    expect(
+      loadEnv({
+        ...base,
+        KYC_AUTO_APPROVE: "true",
+        STRIPE_SECRET_KEY: "sk_test_x1",
+        STRIPE_WEBHOOK_SECRET: "whsec_x1",
+      }).KYC_AUTO_APPROVE,
+    ).toBe(true);
+  });
+
+  it("checks the Open Exchange Rates App ID's shape, and never repeats it", () => {
+    expect(
+      loadEnv({ ...base, OPEN_EXCHANGE_RATES_APP_ID: "a".repeat(32) }).OPEN_EXCHANGE_RATES_APP_ID,
+    ).toBe("a".repeat(32));
+    try {
+      loadEnv({ ...base, OPEN_EXCHANGE_RATES_APP_ID: "secret-looking-value" });
+      throw new Error("should have refused");
+    } catch (e) {
+      expect(String(e)).toContain("OPEN_EXCHANGE_RATES_APP_ID");
+      expect(String(e)).not.toContain("secret-looking-value");
+    }
+  });
+});
