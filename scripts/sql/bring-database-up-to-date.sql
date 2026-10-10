@@ -22,6 +22,38 @@
 
 BEGIN;
 
+-- Lock every existing table before changing anything. The steps below lock tables one at a time
+-- (even a step with nothing to do, like adding a column that is already there), so with the app
+-- running, a request holding one table and waiting for another could deadlock with this script.
+-- Taking all the locks at once, without waiting, rules that out: if any table is busy, the
+-- attempt lets go of everything, pauses and tries again. Once held, the app's requests wait a
+-- moment until COMMIT. On an empty database there is nothing to lock.
+DO $$
+DECLARE
+  tables text;
+  attempt int := 0;
+BEGIN
+  SELECT string_agg(format('%I.%I', schemaname, tablename), ', ' ORDER BY tablename)
+    INTO tables
+    FROM pg_tables
+   WHERE schemaname = current_schema();
+  IF tables IS NULL THEN
+    RETURN;
+  END IF;
+  LOOP
+    BEGIN
+      EXECUTE 'LOCK TABLE ' || tables || ' IN ACCESS EXCLUSIVE MODE NOWAIT';
+      RETURN;
+    EXCEPTION WHEN lock_not_available THEN
+      attempt := attempt + 1;
+      IF attempt >= 300 THEN
+        RAISE EXCEPTION 'The app kept the database busy for 30 seconds, so nothing was changed. Run the script again, or pause ajo-api and ajo-worker on Render while it runs.';
+      END IF;
+      PERFORM pg_sleep(0.1);
+    END;
+  END LOOP;
+END $$;
+
 -- 1790900000000 EnableExtensions ------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS citext;
