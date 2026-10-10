@@ -302,10 +302,9 @@ CREATE TRIGGER users_flag_email_verified BEFORE UPDATE OF email_verified_at ON u
   FOR EACH ROW EXECUTE FUNCTION users_flag_email_verified();
 
 -- 1790900041000 AddRetentionSupport ---------------------------------------------------------
-ALTER TABLE sessions
-  DROP CONSTRAINT IF EXISTS sessions_revoked_reason_check,
-  ADD CONSTRAINT sessions_revoked_reason_check CHECK (revoked_reason IN
-    ('logout', 'logout_all', 'refresh_reuse', 'password_reset', 'admin', 'session_limit'));
+-- It also widens the reasons a session ends with 'session_limit'. That list is set once, in full,
+-- under 1790900160000 below: setting this shorter list here would fail on a re-run once sessions
+-- have ended for the newer reasons.
 CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
 CREATE INDEX IF NOT EXISTS sessions_revoked_at_idx ON sessions (revoked_at) WHERE revoked_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS refresh_tokens_expires_at_idx ON refresh_tokens (expires_at);
