@@ -7,6 +7,9 @@ import { FakeBotCheck } from "./bot-check/fake.adapter.js";
 import { TurnstileBotCheck } from "./bot-check/turnstile.adapter.js";
 import { FakeBreachedPasswords } from "./breached-passwords/fake.adapter.js";
 import { HibpBreachedPasswords } from "./breached-passwords/hibp.adapter.js";
+import { FX_RATES } from "./fx/fx-rates.port.js";
+import { OpenExchangeRates } from "./fx/openexchangerates.adapter.js";
+import { SampleRates } from "./fx/sample.adapter.js";
 import { FakeMailer } from "./mail/fake.adapter.js";
 import { FakeObjectStore } from "./object-store/fake.adapter.js";
 import { OBJECT_STORE } from "./object-store/object-store.port.js";
@@ -77,6 +80,16 @@ import { WebPushSender } from "./push/web-push.adapter.js";
             : new FakeObjectStore(),
     },
     {
+      provide: FX_RATES,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        env.OPEN_EXCHANGE_RATES_APP_ID
+          ? new OpenExchangeRates(env.OPEN_EXCHANGE_RATES_APP_ID)
+          : env.NODE_ENV === "production"
+            ? null
+            : new SampleRates(),
+    },
+    {
       provide: PUSH_SENDER,
       inject: [ENV],
       useFactory: (env: Env) =>
@@ -91,6 +104,6 @@ import { WebPushSender } from "./push/web-push.adapter.js";
             : new FakePushSender(),
     },
   ],
-  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK, OBJECT_STORE, PUSH_SENDER],
+  exports: [MAILER, BREACHED_PASSWORDS, BOT_CHECK, OBJECT_STORE, PUSH_SENDER, FX_RATES],
 })
 export class AdaptersModule {}

@@ -12,6 +12,7 @@ import { AdaptersModule } from "./adapters/adapters.module.js";
 import { AdminModule } from "./admin/admin.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { FriendsModule } from "./friends/friends.module.js";
+import { FxModule } from "./fx/fx.module.js";
 import { GroupsModule } from "./groups/groups.module.js";
 import { TrustModule } from "./groups/trust.module.js";
 import { HealthModule } from "./health/health.module.js";
@@ -68,6 +69,7 @@ export const DEFAULT_RATE_LIMIT = { name: "default", ttl: 60_000, limit: 120 };
     SavingsModule,
     WalletModule,
     AdminModule,
+    FxModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
