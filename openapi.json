@@ -3450,6 +3450,91 @@
         ]
       }
     },
+    "/api/v1/wallet/statement": {
+      "get": {
+        "operationId": "WalletController_statement",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "First day, in the account's own time zone",
+            "schema": {
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Last day, included",
+            "schema": {
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/insights": {
+      "get": {
+        "operationId": "WalletController_insights",
+        "parameters": [
+          {
+            "name": "months",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 24,
+              "default": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
     "/api/v1/admin/auth/login": {
       "post": {
         "operationId": "AdminSessionController_login",
@@ -4146,6 +4231,32 @@
         ],
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/fx/wallet": {
+      "get": {
+        "operationId": "FxController_wallet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FxEquivalentsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "wallet"
         ]
       }
     }
@@ -7016,6 +7127,187 @@
           "next"
         ]
       },
+      "StatementBalance": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "opening": {
+            "type": "string",
+            "description": "Minor units, before the first day"
+          },
+          "closing": {
+            "type": "string",
+            "description": "Minor units, at the end of the last day"
+          },
+          "moneyIn": {
+            "type": "string"
+          },
+          "moneyOut": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "opening",
+          "closing",
+          "moneyIn",
+          "moneyOut"
+        ]
+      },
+      "StatementLine": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "description": "When it happened"
+          },
+          "type": {
+            "type": "string",
+            "example": "funding"
+          },
+          "account": {
+            "type": "string",
+            "enum": [
+              "available",
+              "locked",
+              "savings"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Minor units"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "type",
+          "account",
+          "direction",
+          "amount",
+          "currency",
+          "reference"
+        ]
+      },
+      "StatementResponse": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string",
+            "example": "Africa/Lagos"
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementBalance"
+            }
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatementLine"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More lines than one statement holds; choose a shorter range"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "timeZone",
+          "balances",
+          "lines",
+          "truncated"
+        ]
+      },
+      "InsightMonth": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "example": "2026-09"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "moneyIn": {
+            "type": "string",
+            "description": "Top-ups, circle payouts and returned withdrawals"
+          },
+          "moneyOut": {
+            "type": "string",
+            "description": "Withdrawals, circle payments, late charges and deposit covers"
+          },
+          "savedNet": {
+            "type": "string",
+            "description": "Net change in saving plans (can be negative)"
+          },
+          "endAvailable": {
+            "type": "string"
+          },
+          "endSavings": {
+            "type": "string"
+          },
+          "endLocked": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "currency",
+          "moneyIn",
+          "moneyOut",
+          "savedNet",
+          "endAvailable",
+          "endSavings",
+          "endLocked"
+        ]
+      },
+      "InsightsResponse": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string"
+          },
+          "months": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InsightMonth"
+            }
+          }
+        },
+        "required": [
+          "timeZone",
+          "months"
+        ]
+      },
       "AdminLoginDto": {
         "type": "object",
         "properties": {
@@ -7205,6 +7497,89 @@
           "name",
           "role",
           "code"
+        ]
+      },
+      "EquivalentResponse": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "GBP"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Minor units, rounded",
+            "example": "1240"
+          },
+          "rate": {
+            "type": "string",
+            "description": "Units of this currency for one unit of the wallet's",
+            "example": "0.0005"
+          }
+        },
+        "required": [
+          "currency",
+          "amount",
+          "rate"
+        ]
+      },
+      "WalletEquivalentsResponse": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "NGN"
+          },
+          "total": {
+            "type": "string",
+            "description": "Available, locked and saved together, minor units"
+          },
+          "equivalents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EquivalentResponse"
+            }
+          }
+        },
+        "required": [
+          "currency",
+          "total",
+          "equivalents"
+        ]
+      },
+      "FxEquivalentsResponse": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "False when no rate source is set; nothing else is filled in then"
+          },
+          "asOf": {
+            "type": "object",
+            "nullable": true,
+            "description": "When the rates were true"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The source was down, so these are the last good rates"
+          },
+          "sample": {
+            "type": "boolean",
+            "description": "True for made-up development rates"
+          },
+          "wallets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletEquivalentsResponse"
+            }
+          }
+        },
+        "required": [
+          "available",
+          "asOf",
+          "stale",
+          "sample",
+          "wallets"
         ]
       }
     }

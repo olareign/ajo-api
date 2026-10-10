@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { DataSource } from "typeorm";
 import type { AccessClaims } from "../auth/access-tokens.js";
@@ -6,6 +7,13 @@ import { CurrentUser } from "../auth/current-user.decorator.js";
 import { KycService } from "../kyc/kyc.service.js";
 import { currencyFor } from "../kyc/partners.js";
 import { PaymentProviders } from "../payments/providers/providers.service.js";
+import {
+  InsightsQuery,
+  InsightsResponse,
+  StatementQuery,
+  StatementResponse,
+} from "./reports.dto.js";
+import { WalletReports } from "./reports.service.js";
 import {
   RailsResponse,
   TransactionsQuery,
@@ -22,6 +30,7 @@ export class WalletController {
     private readonly db: DataSource,
     private readonly kyc: KycService,
     private readonly providers: PaymentProviders,
+    private readonly reports: WalletReports,
   ) {}
 
   /** What this person can do with money today: their currency, whether they are approved, and which partners are live. */
@@ -114,5 +123,26 @@ export class WalletController {
       createdAt: r.created_at.toISOString(),
     }));
     return { items, next: rows.length > limit ? page[page.length - 1]!.id : null };
+  }
+
+  /** Every line on the caller's own accounts in a date range, with opening and closing balances. */
+  @Get("statement")
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOkResponse({ type: StatementResponse })
+  statement(
+    @CurrentUser() auth: AccessClaims,
+    @Query() query: StatementQuery,
+  ): Promise<StatementResponse> {
+    return this.reports.statement(auth.userId, query.from, query.to);
+  }
+
+  /** Money in, money out, saved and month-end balances, month by month. */
+  @Get("insights")
+  @ApiOkResponse({ type: InsightsResponse })
+  insights(
+    @CurrentUser() auth: AccessClaims,
+    @Query() query: InsightsQuery,
+  ): Promise<InsightsResponse> {
+    return this.reports.insights(auth.userId, query.months ?? 12);
   }
 }
