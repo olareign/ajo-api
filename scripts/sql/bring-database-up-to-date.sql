@@ -887,6 +887,17 @@ CREATE TABLE IF NOT EXISTS recovery_case_notes (
 CREATE INDEX IF NOT EXISTS recovery_case_notes_case_idx ON recovery_case_notes (case_id, id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS status_note text CHECK (char_length(status_note) <= 300);
 
+-- 1790900210000 StripePartner ----------------------------------------------------------------
+-- Stripe joins Paystack as a payment partner (for the UK).
+ALTER TABLE payment_intents DROP CONSTRAINT IF EXISTS payment_intents_provider_check;
+ALTER TABLE payment_intents ADD CONSTRAINT payment_intents_provider_check CHECK (provider IN ('paystack', 'stripe', 'fake'));
+ALTER TABLE webhook_events DROP CONSTRAINT IF EXISTS webhook_events_provider_check;
+ALTER TABLE webhook_events ADD CONSTRAINT webhook_events_provider_check CHECK (provider IN ('paystack', 'stripe', 'fake'));
+ALTER TABLE payout_accounts DROP CONSTRAINT IF EXISTS payout_accounts_provider_check;
+ALTER TABLE payout_accounts ADD CONSTRAINT payout_accounts_provider_check CHECK (provider IN ('paystack', 'stripe', 'fake'));
+ALTER TABLE mandates DROP CONSTRAINT IF EXISTS mandates_provider_check;
+ALTER TABLE mandates ADD CONSTRAINT mandates_provider_check CHECK (provider IN ('paystack', 'stripe', 'fake'));
+
 -- Tell TypeORM these migrations are done ----------------------------------------------------
 -- Same table and columns TypeORM creates itself; skipped for any already recorded.
 CREATE TABLE IF NOT EXISTS migrations (
@@ -922,14 +933,15 @@ SELECT v.ts, v.name
     (1790900170000::bigint, 'ProfileSettings1790900170000'),
     (1790900180000::bigint, 'ProfilePhoto1790900180000'),
     (1790900190000::bigint, 'WebPush1790900190000'),
-    (1790900200000::bigint, 'AdminBackOffice1790900200000')
+    (1790900200000::bigint, 'AdminBackOffice1790900200000'),
+    (1790900210000::bigint, 'StripePartner1790900210000')
   ) AS v (ts, name)
  WHERE NOT EXISTS (SELECT 1 FROM migrations m WHERE m.name = v.name);
 
 COMMIT;
 
 -- Check (shows in the results pane): email_verified must read `boolean`, NO nullable, default false;
--- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-five migrations must be listed.
+-- `username` must be there (citext, nullable); `kyc_override` must be there (text, nullable); and all twenty-six migrations must be listed.
 SELECT column_name, data_type, is_nullable, column_default
   FROM information_schema.columns
  WHERE table_schema = current_schema() AND table_name = 'users' AND (column_name LIKE 'email_verified%' OR column_name IN ('username', 'kyc_override'))

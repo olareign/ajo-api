@@ -30,7 +30,13 @@ export async function call<T = Record<string, unknown>>(
     response = await fetchFn(url, {
       method: init.method,
       headers: { Accept: "application/json", ...init.headers },
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      // A string is sent as it is (a form-encoded body); anything else as JSON.
+      body:
+        init.body === undefined
+          ? undefined
+          : typeof init.body === "string"
+            ? init.body
+            : JSON.stringify(init.body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {

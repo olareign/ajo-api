@@ -329,6 +329,8 @@ describe("the audit log", () => {
           i.admin_email === support.email && i.action.startsWith("user."),
       ),
     ).toBe(true);
+    // Enough rows for more than one page, whatever else is in the shared database.
+    for (let i = 0; i < 55; i += 1) await support.call("get", `/users/${person.id}`).expect(200);
     const first = await owner.call("get", "/audit").expect(200);
     expect(first.body.items.length).toBe(50);
     expect(first.body.next).toBeTruthy();

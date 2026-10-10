@@ -21,6 +21,7 @@ import { WebhookInbox } from "./webhook-inbox.service.js";
 /** Where each partner puts its signature. */
 const SIGNATURE_HEADER: Readonly<Record<ProviderName, string>> = {
   paystack: "x-paystack-signature",
+  stripe: "stripe-signature",
   fake: "x-fake-signature",
 };
 

@@ -1,7 +1,7 @@
 export type Country = "NG" | "GB";
 export type Currency = "NGN" | "GBP";
 export type FundingMethod = "card" | "transfer" | "ussd" | "direct_debit";
-export type ProviderName = "paystack" | "fake";
+export type ProviderName = "paystack" | "stripe" | "fake";
 
 /** The partner said no, clearly: nothing happened on their side, so it is safe to treat as failed. */
 export class ProviderRejected extends Error {
