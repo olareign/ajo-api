@@ -103,3 +103,11 @@ export class AuditQuery {
   @Matches(/^\d{1,18}$/)
   before?: string;
 }
+
+export class SupportEmailDto extends ActionDto {
+  @ApiProperty({ example: "info@ajo.com", description: "The address customers write to for help" })
+  @Transform(lower)
+  @IsEmail({ require_tld: true, allow_display_name: false, allow_ip_domain: false })
+  @MaxLength(254)
+  email!: string;
+}

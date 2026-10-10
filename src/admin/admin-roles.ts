@@ -11,7 +11,8 @@ export type Permission =
   | "cases:read"
   | "cases:write"
   | "audit:read"
-  | "team:manage";
+  | "team:manage"
+  | "settings:manage";
 
 /**
  * What each role may do, and nothing more. A new permission is given to no one until it is listed
@@ -29,6 +30,7 @@ const GRANTS: Readonly<Record<AdminRole, readonly Permission[]>> = {
     "cases:write",
     "audit:read",
     "team:manage",
+    "settings:manage",
   ],
   support: ["overview:read", "users:read", "users:suspend", "cases:read"],
   compliance: [

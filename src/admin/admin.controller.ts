@@ -20,6 +20,7 @@ import { AdminAuth } from "./admin-auth.service.js";
 import { AdminCases } from "./admin-cases.service.js";
 import { AdminCompliance } from "./admin-compliance.service.js";
 import { AdminPeople } from "./admin-people.service.js";
+import { AdminSettings } from "./admin-settings.service.js";
 import { CurrentAdmin, type AdminPrincipal } from "./admin-principal.js";
 import { permissionsOf } from "./admin-roles.js";
 import { AdminRoute } from "./admin.guard.js";
@@ -35,6 +36,7 @@ import {
   KycOverrideDto,
   KycStepDecisionDto,
   StepUpDto,
+  SupportEmailDto,
   UserSearchQuery,
 } from "./admin.dto.js";
 
@@ -320,5 +322,34 @@ export class AdminTeamController {
   ): Promise<void> {
     await this.auth.stepUp(admin.id, body.code);
     await this.auth.disable(admin, id);
+  }
+}
+
+@ApiTags("admin")
+@Controller("admin/settings")
+export class AdminSettingsController {
+  constructor(
+    private readonly settings: AdminSettings,
+    private readonly auth: AdminAuth,
+  ) {}
+
+  /** What customers see today, and who last changed it. */
+  @AdminRoute("settings:manage")
+  @Get()
+  read() {
+    return this.settings.read();
+  }
+
+  /** Changes the support email shown on Help and the legal pages, with a fresh code and a reason. */
+  @AdminRoute("settings:manage")
+  @Post("support-email")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 10, ttl: FIFTEEN_MINUTES } })
+  async supportEmail(
+    @CurrentAdmin() admin: AdminPrincipal,
+    @Body() body: SupportEmailDto,
+  ): Promise<void> {
+    await this.auth.stepUp(admin.id, body.code);
+    await this.settings.setSupportEmail(admin, body.email, body.reason);
   }
 }

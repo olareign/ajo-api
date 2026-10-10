@@ -4234,6 +4234,75 @@
         ]
       }
     },
+    "/api/v1/admin/settings": {
+      "get": {
+        "operationId": "AdminSettingsController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/support-email": {
+      "post": {
+        "operationId": "AdminSettingsController_supportEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/site/contact": {
+      "get": {
+        "operationId": "SiteController_contact",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportContactResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "site"
+        ]
+      }
+    },
     "/api/v1/fx/wallet": {
       "get": {
         "operationId": "FxController_wallet",
@@ -7497,6 +7566,41 @@
           "name",
           "role",
           "code"
+        ]
+      },
+      "SupportEmailDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "A fresh 6-digit code from the authenticator app"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why, in a sentence; kept in the audit log"
+          },
+          "email": {
+            "type": "string",
+            "example": "info@ajo.com",
+            "description": "The address customers write to for help"
+          }
+        },
+        "required": [
+          "code",
+          "reason",
+          "email"
+        ]
+      },
+      "SupportContactResponse": {
+        "type": "object",
+        "properties": {
+          "supportEmail": {
+            "type": "string",
+            "example": "info@ajo.com"
+          }
+        },
+        "required": [
+          "supportEmail"
         ]
       },
       "EquivalentResponse": {
