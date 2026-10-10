@@ -17,6 +17,7 @@ import { ProfilePhoto1790900180000 } from "./1790900180000-profile-photo.js";
 import { WebPush1790900190000 } from "./1790900190000-web-push.js";
 import { AdminBackOffice1790900200000 } from "./1790900200000-admin-back-office.js";
 import { StripePartner1790900210000 } from "./1790900210000-stripe-partner.js";
+import { SiteSettings1790900220000 } from "./1790900220000-site-settings.js";
 import { CreateKycSteps1790900080000 } from "./1790900080000-create-kyc-steps.js";
 import { CreatePayments1790900090000 } from "./1790900090000-create-payments.js";
 import { CreateNotifications1790900100000 } from "./1790900100000-create-notifications.js";
@@ -53,4 +54,5 @@ export const migrations = [
   WebPush1790900190000,
   AdminBackOffice1790900200000,
   StripePartner1790900210000,
+  SiteSettings1790900220000,
 ];

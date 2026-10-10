@@ -4,8 +4,10 @@ describe("admin roles", () => {
   it("lets the owner do everything, and only the owner manage the team", () => {
     for (const p of permissionsOf("support")) expect(can("owner", p)).toBe(true);
     expect(can("owner", "team:manage")).toBe(true);
+    expect(can("owner", "settings:manage")).toBe(true);
     for (const role of ADMIN_ROLES.filter((r) => r !== "owner")) {
       expect(can(role, "team:manage")).toBe(false);
+      expect(can(role, "settings:manage")).toBe(false);
     }
   });
 
