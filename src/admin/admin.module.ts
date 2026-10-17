@@ -7,6 +7,7 @@ import { AdminAudit } from "./admin-audit.service.js";
 import { AdminAuth } from "./admin-auth.service.js";
 import { AdminCases } from "./admin-cases.service.js";
 import { AdminCompliance } from "./admin-compliance.service.js";
+import { AdminDashboard } from "./admin-dashboard.service.js";
 import { AdminPeople } from "./admin-people.service.js";
 import { AdminSettings } from "./admin-settings.service.js";
 import {
@@ -38,6 +39,7 @@ import { AdminGuard } from "./admin.guard.js";
     AdminPeople,
     AdminCompliance,
     AdminCases,
+    AdminDashboard,
     AdminSettings,
     AdminGuard,
   ],
