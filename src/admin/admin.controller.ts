@@ -19,6 +19,7 @@ import { AdminAudit } from "./admin-audit.service.js";
 import { AdminAuth } from "./admin-auth.service.js";
 import { AdminCases } from "./admin-cases.service.js";
 import { AdminCompliance } from "./admin-compliance.service.js";
+import { AdminDashboard } from "./admin-dashboard.service.js";
 import { AdminPeople } from "./admin-people.service.js";
 import { AdminSettings } from "./admin-settings.service.js";
 import { CurrentAdmin, type AdminPrincipal } from "./admin-principal.js";
@@ -51,6 +52,7 @@ export class AdminSessionController {
   constructor(
     private readonly auth: AdminAuth,
     private readonly people: AdminPeople,
+    private readonly dashboard: AdminDashboard,
   ) {}
 
   /** Password and a code from the authenticator app, together, every time. */
@@ -103,6 +105,14 @@ export class AdminSessionController {
   @Get("overview")
   overview() {
     return this.people.overview();
+  }
+
+  /** The first screen: people, money, trends over 30 days and what is waiting. Totals only. */
+  @AdminRoute("overview:read")
+  @Get("dashboard")
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  board() {
+    return this.dashboard.read();
   }
 }
 

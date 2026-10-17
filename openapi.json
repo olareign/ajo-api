@@ -3664,6 +3664,25 @@
         ]
       }
     },
+    "/api/v1/admin/dashboard": {
+      "get": {
+        "operationId": "AdminSessionController_board",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/users/search": {
       "get": {
         "operationId": "AdminPeopleController_search",
